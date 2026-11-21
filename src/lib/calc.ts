@@ -94,6 +94,8 @@ export function planTrip(trip: Trip, trims: Trim[]): TripPlan {
 export interface SavingsStatus { pct: number; behind: boolean; label: string }
 
 export function savingsStatus(g: SavingsGoal, ref = todayISO()): SavingsStatus {
+  if (g.contributing === false) return { pct: 0, behind: false, label: `${money(g.saved)} invested · no new contributions, still growing` };
+  if (!g.target) return { pct: 0, behind: false, label: g.monthly ? `${money(g.saved)} so far · ${money(g.monthly)} a month` : `${money(g.saved)} so far · add a monthly amount` };
   const p = pct(g.saved, g.target);
   const left = Math.max(0, g.target - g.saved);
   const base = `${money(g.saved)} of ${money(g.target)} · ${money(g.monthly)} a month`;

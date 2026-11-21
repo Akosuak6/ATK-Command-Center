@@ -88,6 +88,14 @@ export async function parseExport(file: File): Promise<ParsedExport> {
   const before = raw.length;
   raw = raw.filter((r) => r.date && Number.isFinite(r.amount));
 
+  // Money moving between your own accounts is not spending: a bank name from another account in the
+  // export (for example "JPMORGAN CHASE BANK" leaving SoFi), and returned card payments.
+  const bankWords = [...new Set(raw.flatMap((r) => r.institution.toLowerCase().split(/[^a-z]+/)).filter((w) => w.length > 3 && !['bank', 'banking'].includes(w)))];
+  const ownTransfer = (r: (typeof raw)[number]) =>
+    /returned payment/i.test(r.name) ||
+    (/^(uncategorized|cash & checks|internal transfers?|transfer)?$/i.test(r.category) && !/zelle|venmo|cash app|paypal|western union|atm/i.test(r.name) &&
+      bankWords.some((w) => new RegExp(`\\b${w}\\b`, 'i').test(r.name) && !r.institution.toLowerCase().includes(w)));
+
   // If income rows are positive, this export uses the opposite sign; flip it.
   const income = raw.filter((r) => /^income$/i.test(r.category));
   const flip = income.length > 0 && income.filter((r) => r.amount > 0).length > income.length / 2;
@@ -107,7 +115,7 @@ export async function parseExport(file: File): Promise<ParsedExport> {
       name: r.name,
       amount: Math.round(r.amount * 100) / 100,
       category: r.category,
-      kind: r.ignored ? 'ignored' : kindFor(r.category, r.amount),
+      kind: r.ignored ? 'ignored' : ownTransfer(r) ? 'transfer' : kindFor(r.category, r.amount),
       note: r.note
     };
   });

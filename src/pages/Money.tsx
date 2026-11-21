@@ -296,7 +296,11 @@ const savingsFields: FieldDef<SavingsGoal>[] = [
   { key: 'target', label: 'Target', type: 'number' },
   { key: 'saved', label: 'Saved so far', type: 'number' },
   { key: 'monthly', label: 'Monthly contribution', type: 'number' },
-  { key: 'due', label: 'Target date', type: 'date' }
+  { key: 'due', label: 'Target date', type: 'date' },
+  { key: 'kind', label: 'Kind', type: 'select', options: [{ value: 'retirement', label: 'Retirement (401k, IRA)' }, { value: 'savings', label: 'Savings' }, { value: 'brokerage', label: 'Brokerage' }, { value: 'other', label: 'Other' }] },
+  { key: 'contributing', label: 'Still contributing', type: 'checkbox' },
+  { key: 'order', label: 'Priority (1 gets money first)', type: 'number' },
+  { key: 'note', label: 'Note', wide: true }
 ];
 
 const roadmapFields: FieldDef<RoadmapItem>[] = [
@@ -319,38 +323,71 @@ export function MoneyGoals() {
   const lastTrip = trips.reduce((d, t) => (t.date > d ? t.date : d), '');
   const tripPct = pct(allSaved, allCost);
 
-  // Fixed color order: first savings goals, then trips. Anything past three folds into Other.
-  const entities = [
-    ...savings.map((g) => ({ key: g.id, label: g.name.split(',')[0], monthly: g.monthly })),
-    { key: 'trips', label: 'Trip funds', monthly: Math.round(allMonthly) }
+  // Three kinds, in your order of priority: retirement levers first, then savings, then brokerage.
+  const KIND_LABEL: Record<string, string> = { retirement: 'Retirement', savings: 'Savings', brokerage: 'Brokerage', other: 'Other goals' };
+  const kindOf = (g: SavingsGoal) => g.kind ?? (/401|ira|roth|retire/i.test(g.name) ? 'retirement' : /brokerage|invest/i.test(g.name) ? 'brokerage' : 'savings');
+  const active = savings.filter((g) => g.contributing !== false);
+  const byKind = (k: string) => active.filter((g) => kindOf(g) === k).reduce((a, g) => a + g.monthly, 0) + (k === 'savings' ? Math.round(allMonthly) : 0);
+  const segments: Segment[] = [
+    { label: 'Retirement', value: byKind('retirement'), color: SERIES[0] },
+    { label: 'Savings and trips', value: byKind('savings'), color: SERIES[1] },
+    { label: 'Brokerage', value: byKind('brokerage'), color: SERIES[2] },
+    { label: 'Other goals', value: byKind('other'), color: SERIES_OTHER }
   ];
-  const colorFor = (i: number) => SERIES[i] ?? SERIES_OTHER;
-  const segments: Segment[] = entities.slice(0, 3).map((e, i) => ({ label: e.label, value: e.monthly, color: colorFor(i) }));
-  const rest = entities.slice(3).reduce((a, e) => a + e.monthly, 0);
-  if (rest > 0) segments.push({ label: 'Other goals', value: rest, color: SERIES_OTHER });
   const total = segments.reduce((a, x) => a + x.value, 0);
+  const colorFor = (g: SavingsGoal) => ({ retirement: SERIES[0], savings: SERIES[1], brokerage: SERIES[2] } as Record<string, string>)[kindOf(g)] ?? SERIES_OTHER;
+  const paused = savings.filter((g) => g.contributing === false);
 
   return (
     <div className="stack">
       <section className="card" aria-labelledby="plan-h">
         <div className="row row-wrap"><h2 className="h2" id="plan-h">Where your monthly savings go</h2><span className="num" style={{ fontSize: 26 }}>{money(total)}<span className="unit">a month</span></span></div>
         <StackedBar label="Monthly savings plan" segments={segments} />
+        <div>
+          <span className="lbl">Your savings order</span>
+          <ol className="lever-list">
+            {active.map((g) => (
+              <li key={g.id}>
+                <span className="swatch" style={{ background: colorFor(g) }} aria-hidden="true" />
+                <span className="line-main"><strong style={{ fontSize: 14 }}>{g.name}</strong>{g.note && <span className="sub">{g.note}</span>}</span>
+                <span className="tag t-plain">{KIND_LABEL[kindOf(g)]}</span>
+                {g.monthly ? <span className="lever-amt">{money(g.monthly)}</span> : <span className="sub lever-amt">Add amount</span>}
+              </li>
+            ))}
+            {allMonthly > 0 && (
+              <li>
+                <span className="swatch" style={{ background: SERIES[1] }} aria-hidden="true" />
+                <span className="line-main"><strong style={{ fontSize: 14 }}>Trip funds</strong><span className="sub">From your trip planner</span></span>
+                <span className="tag t-plain">Savings</span>
+                <span className="lever-amt">{money(allMonthly)}</span>
+              </li>
+            )}
+          </ol>
+          {paused.map((g) => (
+            <p className="sub" key={g.id} style={{ marginTop: 8 }}><strong>{g.name}:</strong> {money(g.saved)} stays invested and keeps growing. No new contributions{g.note ? `, ${g.note.charAt(0).toLowerCase()}${g.note.slice(1)}` : ''}.</p>
+          ))}
+        </div>
       </section>
 
       <div className="row row-wrap" style={{ alignItems: 'center' }}>
-        <h2 className="h2">Savings goals</h2>
+        <h2 className="h2">Accounts and goals</h2>
         <EditButton label="Edit savings goals" onClick={() => setEdit('savings')} />
       </div>
       <div className="grid2">
-        {savings.map((g, i) => {
+        {savings.map((g) => {
           const st = savingsStatus(g);
+          const chart = g.contributing !== false && g.target > 0;
           return (
             <section className="card" key={g.id} aria-labelledby={`sg-${g.id}`}>
               <div className="row">
                 <span className="goal-t" id={`sg-${g.id}`} style={{ fontSize: 15 }}>{g.name}</span>
-                <span className={st.behind ? 'pct bad-text' : 'pct'}>{st.behind ? `Behind, ${st.pct}%` : `${st.pct}%`}</span>
+                <span className="chips" style={{ gap: 6 }}>
+                  <span className="tag t-plain">{g.contributing === false ? 'Not contributing' : KIND_LABEL[kindOf(g)]}</span>
+                  {chart && <span className={st.behind ? 'pct bad-text' : 'pct'}>{st.behind ? `Behind, ${st.pct}%` : `${st.pct}%`}</span>}
+                </span>
               </div>
-              <ProjectionChart title={g.name} saved={g.saved} target={g.target} monthly={g.monthly} due={g.due} color={colorFor(i)} />
+              {chart ? <ProjectionChart title={g.name} saved={g.saved} target={g.target} monthly={g.monthly} due={g.due} color={colorFor(g)} />
+                : <span className="num">{money(g.saved)}</span>}
               <span className="sub">{st.label}</span>
             </section>
           );
@@ -360,7 +397,7 @@ export function MoneyGoals() {
             <a className="goal-t" id="sg-trips" href={hrefFor('money', 'trips')} style={{ color: 'inherit', fontSize: 15 }}>Trip funds, all trips</a>
             <span className="pct">{tripPct}%</span>
           </div>
-          <ProjectionChart title="Trip funds" saved={allSaved} target={allCost} monthly={allMonthly} due={lastTrip} color={colorFor(savings.length)} />
+          <ProjectionChart title="Trip funds" saved={allSaved} target={allCost} monthly={allMonthly} due={lastTrip} color={SERIES[1]} />
           <span className="sub">{money(allSaved)} of {money(allCost)} across {trips.length} trips · {money(allMonthly)} a month</span>
         </section>
       </div>
@@ -381,7 +418,7 @@ export function MoneyGoals() {
       </section>
       <TableEditor<SavingsGoal>
         title="Edit savings goals" open={edit === 'savings'} onClose={() => setEdit('')} table={db.savings} rows={savings} fields={savingsFields}
-        itemName={(g) => g.name} addLabel="Add a savings goal" make={() => ({ order: savings.length + 1, name: '', target: 0, saved: 0, monthly: 0, due: '' })}
+        itemName={(g) => g.name} addLabel="Add a savings goal" make={() => ({ order: savings.length + 1, name: '', target: 0, saved: 0, monthly: 0, due: '', kind: 'savings', contributing: true })}
       />
       <TableEditor<RoadmapItem>
         title="Edit roadmap" open={edit === 'roadmap'} onClose={() => setEdit('')} table={db.roadmap} rows={roadmap} fields={roadmapFields}

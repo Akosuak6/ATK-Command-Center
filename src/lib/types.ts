@@ -15,6 +15,7 @@ export interface DumpItem {
   rating: number;
   comments: DumpComment[];
   photo?: string; // cover image
+  watched?: boolean; // films and TV shows: false means still on your watchlist
 }
 
 export type Shelf = 'Read' | 'Reading' | 'Want to read';
@@ -70,7 +71,8 @@ export interface Restaurant { id: string; name: string; cuisine: string; hood: s
 export interface ShowEvent {
   id: string;
   title: string;
-  date: string;
+  date: string; // empty for a seasonal favorite with no date yet
+  season?: string; // e.g. Winter, for something you go to every year
   detail: string;
   ticket?: { name: string; type: string; data: string }; // data URL
 }
@@ -110,7 +112,19 @@ export interface Transaction {
   note: string;
 }
 
-export interface SavingsGoal { id: string; order: number; name: string; target: number; saved: number; monthly: number; due: string }
+export type SavingsKind = 'retirement' | 'savings' | 'brokerage' | 'other';
+export interface SavingsGoal {
+  id: string;
+  order: number; // your priority: money goes to the lowest number first
+  name: string;
+  target: number;
+  saved: number;
+  monthly: number;
+  due: string;
+  kind?: SavingsKind;
+  contributing?: boolean; // false: still invested, but no new money goes in
+  note?: string;
+}
 
 export interface RoadmapItem { id: string; year: string; title: string; detail: string; tag: string }
 

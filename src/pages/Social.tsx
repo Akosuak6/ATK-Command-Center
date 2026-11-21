@@ -35,7 +35,7 @@ export function VisionBoard({ focus }: { focus?: string }) {
   const [addingR, setAddingR] = useState(false);
   const [editingPin, setEditingPin] = useState<Pin | null>(null);
   const [editingR, setEditingR] = useState<Restaurant | null>(null);
-  const [sForm, setSForm] = useState({ title: '', date: '', detail: '' });
+  const [sForm, setSForm] = useState({ title: '', date: '', detail: '', season: '' });
   const [edit, setEdit] = useState<'' | 'shows'>('');
   useFocusItem(focus, restaurants.length > 0);
 
@@ -65,9 +65,9 @@ export function VisionBoard({ focus }: { focus?: string }) {
     setAddingR(false);
   };
   const addShow = () => {
-    if (!sForm.title.trim() || !sForm.date) { toast('Add a name and a date'); return; }
-    void db.shows.add({ id: uid(), title: sForm.title.trim(), date: sForm.date, detail: sForm.detail.trim() });
-    setSForm({ title: '', date: '', detail: '' });
+    if (!sForm.title.trim() || (!sForm.date && !sForm.season)) { toast('Add a name, and a date or a season'); return; }
+    void db.shows.add({ id: uid(), title: sForm.title.trim(), date: sForm.date, detail: sForm.detail.trim(), ...(sForm.season && !sForm.date ? { season: sForm.season } : {}) });
+    setSForm({ title: '', date: '', detail: '', season: '' });
   };
   const attachTicket = async (show: ShowEvent, file: File) => {
     if (file.size > MAX_TICKET_BYTES) { toast('That file is over 6 MB. Try a screenshot instead.'); return; }
@@ -78,7 +78,7 @@ export function VisionBoard({ focus }: { focus?: string }) {
 
   const shownR = restaurants.filter((r) => rFilter === 'All' || r.list === rFilter);
   const today = todayISO();
-  const upcomingShows = shows.filter((s) => s.date >= addDays(today, -1));
+  const upcomingShows = [...shows.filter((s) => s.date && s.date >= addDays(today, -1)), ...shows.filter((s) => !s.date && s.season)];
 
   return (
     <div className="stack">
@@ -144,7 +144,9 @@ export function VisionBoard({ focus }: { focus?: string }) {
           <div className="row"><h3 className="h2" id="shows-h" style={{ fontSize: 20 }}>Shows and events</h3><span className="lbl">Tickets</span></div>
           {upcomingShows.map((s) => (
             <div className="ticket" key={s.id}>
-              <div className="ticket-date"><span>{monthShort(s.date).toUpperCase()}</span><span>{parseISO(s.date).getDate()}</span></div>
+              {s.date
+                ? <div className="ticket-date"><span>{monthShort(s.date).toUpperCase()}</span><span>{parseISO(s.date).getDate()}</span></div>
+                : <div className="ticket-date season"><span>EVERY</span><span>{(s.season ?? '').toUpperCase()}</span></div>}
               <div className="ticket-body">
                 {s.ticket?.type.startsWith('image/') && <img className="ticket-thumb" src={s.ticket.data} alt="" />}
                 <strong style={{ fontSize: 14 }}>{s.title}</strong>
@@ -167,6 +169,11 @@ export function VisionBoard({ focus }: { focus?: string }) {
                 <div className="form-col"><label className="lbl" htmlFor="sdate">Date</label><input id="sdate" type="date" className="field" value={sForm.date} onChange={(e) => setSForm({ ...sForm, date: e.target.value })} /></div>
                 <div className="form-col"><label className="lbl" htmlFor="sdetail">Seat or time</label><input id="sdetail" className="field" value={sForm.detail} onChange={(e) => setSForm({ ...sForm, detail: e.target.value })} /></div>
               </div>
+              <label className="lbl" htmlFor="sseason">No date yet? Every year in</label>
+              <select id="sseason" className="field" value={sForm.season} onChange={(e) => setSForm({ ...sForm, season: e.target.value })}>
+                <option value="">Not seasonal</option>
+                {['Winter', 'Spring', 'Summer', 'Fall'].map((x) => <option key={x} value={x}>{x}</option>)}
+              </select>
               <button type="submit" className="btn2">Add event</button>
             </form>
           </details>
@@ -233,7 +240,7 @@ export function VisionBoard({ focus }: { focus?: string }) {
       />
       <TableEditor<ShowEvent>
         title="Edit shows and events" open={edit === 'shows'} onClose={() => setEdit('')} table={db.shows} rows={shows}
-        fields={[{ key: 'title', label: 'What', wide: true }, { key: 'date', label: 'Date', type: 'date' }, { key: 'detail', label: 'Seat or time' }]}
+        fields={[{ key: 'title', label: 'What', wide: true }, { key: 'date', label: 'Date', type: 'date' }, { key: 'detail', label: 'Seat or time' }, { key: 'season', label: 'Every year in (when there is no date)', type: 'select', options: [{ value: '', label: 'Not seasonal' }, ...['Winter', 'Spring', 'Summer', 'Fall'].map((x) => ({ value: x, label: x }))] }]}
         itemName={(s) => s.title}
       />
     </div>

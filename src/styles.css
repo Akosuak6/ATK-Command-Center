@@ -474,3 +474,12 @@ dialog.sheet[open] { display: flex; flex-direction: column; overflow: hidden; }
 .habit-count { font-size: 10px; font-weight: 600; }
 .stats-tight .num { font-size: clamp(22px, 6.4vw, 32px); white-space: nowrap; }
 .stat { overflow: hidden; }
+.ticket-date.season span:first-child { font-size: 9px; }
+.ticket-date.season span:last-child { font-family: var(--sans); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; }
+.lever-list { list-style: none; margin: 8px 0 0; padding: 0; counter-reset: lever; }
+.lever-list li { counter-increment: lever; display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--divider); }
+.lever-list li:last-child { border-bottom: none; }
+.lever-list li::before { content: counter(lever); font-family: var(--serif); font-size: 18px; width: 18px; color: var(--muted); }
+.lever-amt { font-weight: 600; min-width: 64px; text-align: right; white-space: nowrap; }
+.lever-list .line-main strong { line-height: 1.25; }
+@media (max-width: 760px) { .lever-list .tag { display: none; } }

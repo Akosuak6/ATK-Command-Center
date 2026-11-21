@@ -88,6 +88,27 @@ export class CommandCenterDB extends Dexie {
         else if (!cur.pastVisits && r.pastVisits) await tx.table('studios').update(r.id, { pastVisits: r.pastVisits });
       }
     });
+    // Version 8: replace the untouched sample savings goals with the seed ones.
+    this.version(8).stores({}).upgrade(async (tx) => {
+      const rows = (seed as { savings?: { id: string }[] }).savings ?? [];
+      const sample = new Set(['emergency', 'roth']);
+      const current = (await tx.table('savings').toArray()) as { id: string; saved: number; target: number }[];
+      const untouched = current.every((r) => sample.has(r.id)) && current.some((r) => r.id === 'emergency' && r.target === 30000 && r.saved === 19200);
+      if (rows.length && rows.some((r) => !sample.has(r.id)) && (current.length === 0 || untouched)) {
+        await tx.table('savings').clear();
+        await tx.table('savings').bulkAdd(rows);
+      }
+    });
+    // Version 7: replace the untouched sample budget with the seed budget and category mapping.
+    this.version(7).stores({}).upgrade(async (tx) => {
+      const data = seed as { budget?: { id: string }[]; meta?: Record<string, unknown> };
+      const current = (await tx.table('budget').toArray()) as { id: string }[];
+      if (data.budget?.length && !data.budget.every((r) => /^bc\d+$/.test(r.id)) && (current.length === 0 || current.every((r) => /^bc\d+$/.test(r.id)))) {
+        await tx.table('budget').clear();
+        await tx.table('budget').bulkAdd(data.budget);
+      }
+      if (data.meta?.categoryMap && !(await tx.table('meta').get('categoryMap'))) await tx.table('meta').put({ key: 'categoryMap', value: data.meta.categoryMap });
+    });
     // Version 6: transactions from Rocket Money exports.
     this.version(6).stores({ transactions: 'id, date, category, kind' });
     // Version 5: replace the untouched sample supplements and habits with the seed ones.
@@ -122,7 +143,7 @@ export const db = new CommandCenterDB();
 
 // Small corrections to seed data that already reached a phone. Each patch runs once, and only
 // when the row still looks the way the seed left it, so anything you edited yourself is kept.
-interface SeedPatch { id: string; table: string; row: string; from: Record<string, unknown>; set: Record<string, unknown> }
+interface SeedPatch { id: string; table: string; row: string; from?: Record<string, unknown>; set?: Record<string, unknown>; add?: Record<string, unknown> }
 
 export async function applySeedPatches() {
   const patches = ((seed as { patches?: SeedPatch[] }).patches ?? []).filter((p) => db.tables.some((t) => t.name === p.table));
@@ -132,7 +153,8 @@ export async function applySeedPatches() {
     if (applied.has(p.id)) continue;
     const table = db.table(p.table);
     const current = (await table.get(p.row)) as Record<string, unknown> | undefined;
-    if (current && Object.entries(p.from).every(([k, v]) => current[k] === v)) await table.update(p.row, p.set);
+    if (p.add && !current) await table.add({ ...p.add, id: p.row });
+    else if (p.set && current && Object.entries(p.from ?? {}).every(([k, v]) => current[k] === v)) await table.update(p.row, p.set);
     applied.add(p.id);
   }
   await db.meta.put({ key: 'appliedPatches', value: [...applied] });

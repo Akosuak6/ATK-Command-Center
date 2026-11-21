@@ -57,12 +57,14 @@ export function DumpAll({ focus }: { focus?: string }) {
   const dump = useTable(db.dump, 'date', true);
   const toast = useToast();
   const [form, setForm] = useState<{ url: string; type: DumpType; title: string; note: string }>({ url: '', type: 'Article', title: '', note: '' });
-  const [filter, setFilter] = useState<'All' | DumpType>('All');
+  const [filter, setFilter] = useState<'All' | 'Watchlist' | DumpType>('All');
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [editingD, setEditingD] = useState<DumpItem | null>(null);
   useFocusItem(focus, dump.length > 0);
 
-  const shown = dump.filter((d) => filter === 'All' || d.type === filter);
+  const isScreen = (d: DumpItem) => d.type === 'Film' || d.type === 'TV show';
+  const shown = dump.filter((d) => filter === 'All' || (filter === 'Watchlist' ? isScreen(d) && !d.watched : d.type === filter));
+  const toWatch = dump.filter((d) => isScreen(d) && !d.watched).length;
 
   const submit = async () => {
     if (!form.url.trim() && !form.title.trim()) {
@@ -107,7 +109,7 @@ export function DumpAll({ focus }: { focus?: string }) {
         <button type="submit" className="btn">Dump it</button>
       </form>
 
-      <Chips label="Filter by type" value={filter} onChange={setFilter} options={[{ value: 'All', label: 'All' }, ...DUMP_TYPES.map((t) => ({ value: t, label: DUMP_PLURAL[t] }))]} />
+      <Chips label="Filter by type" value={filter} onChange={setFilter} options={[{ value: 'All', label: 'All' }, { value: 'Watchlist', label: `To watch (${toWatch})` }, ...DUMP_TYPES.map((t) => ({ value: t, label: DUMP_PLURAL[t] }))]} />
 
       {shown.length === 0 && <p className="empty">Nothing here yet.</p>}
       <div className="masonry">
@@ -127,6 +129,12 @@ export function DumpAll({ focus }: { focus?: string }) {
               <span className="dump-title">{d.title}</span>
             )}
             {d.note && <div className="my-take"><strong>My take:</strong> {d.note}</div>}
+            {isScreen(d) && (
+              <div className="row" style={{ alignItems: 'center' }}>
+                <span className={`tag ${d.watched ? 't-plain' : 't-work'}`}>{d.watched ? 'Watched' : 'To watch'}</span>
+                <button type="button" className="btn-text" onClick={() => db.dump.update(d.id, { watched: !d.watched })}>{d.watched ? 'Back to the watchlist' : 'Mark as watched'}</button>
+              </div>
+            )}
             <Stars small label={`Rating for ${d.title}`} value={d.rating} onPick={(n) => db.dump.update(d.id, { rating: n })} />
             {d.comments.map((c, i) => (
               <div className="comment" key={i}><span>{c.text}</span><span className="sub" style={{ whiteSpace: 'nowrap' }}>{shortDate(c.date)}</span></div>
