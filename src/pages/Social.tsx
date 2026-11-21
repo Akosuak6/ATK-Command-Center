@@ -2,14 +2,14 @@ import { useState } from 'react';
 import { db, uid, useMeta, useTable } from '../lib/db';
 import { hrefFor } from '../lib/router';
 import { addDays, clock12, daysBetween, gapLabel, monthShort, normalizeUrl, parseISO, pct, titleFromUrl, todayISO, weekdayShort } from '../lib/format';
-import type { Person, Restaurant, RestaurantList, ShowEvent } from '../lib/types';
+import type { Person, Pin, Restaurant, RestaurantList, ShowEvent } from '../lib/types';
 import { Chips, EditButton, FileButton, Sheet, openDataUrl, readFileAsDataURL, resizePhoto, useToast } from '../components/ui';
 import { ImagePicker } from '../components/ImagePicker';
 import { PhotoPlaceholder } from './Health';
-import { IconTrash } from '../components/Icons';
+import { IconPencil, IconTrash } from '../components/Icons';
 import { TableEditor } from '../components/ListEditor';
 import { useFocusItem } from '../components/Search';
-import { fetchPreview } from '../lib/preview';
+import { previewWithCover } from '../lib/preview';
 
 const MAX_TICKET_BYTES = 6 * 1024 * 1024;
 
@@ -26,6 +26,7 @@ export function VisionBoard({ focus }: { focus?: string }) {
   const [rFilter, setRFilter] = useState<'All' | RestaurantList>('All');
   const [rForm, setRForm] = useState({ name: '', cuisine: '', hood: '', list: 'Want to try' as RestaurantList, photo: undefined as string | undefined });
   const [addingR, setAddingR] = useState(false);
+  const [editingPin, setEditingPin] = useState<Pin | null>(null);
   const [editingR, setEditingR] = useState<Restaurant | null>(null);
   const [sForm, setSForm] = useState({ title: '', date: '', detail: '' });
   const [edit, setEdit] = useState<'' | 'shows'>('');
@@ -47,8 +48,8 @@ export function VisionBoard({ focus }: { focus?: string }) {
     const id = uid();
     setPinDraft('');
     await db.pins.add({ id, kind: 'link', url, title: titleFromUrl(url), date: new Date().toISOString() });
-    const p = await fetchPreview(url);
-    if (p?.title) await db.pins.update(id, { title: p.title });
+    const p = await previewWithCover(url);
+    if (p.title || p.cover) await db.pins.update(id, { ...(p.title ? { title: p.title } : {}), ...(p.cover ? { cover: p.cover } : {}) });
   };
   const addRestaurant = () => {
     if (!rForm.name.trim()) { toast('Add a name first'); return; }
@@ -78,7 +79,7 @@ export function VisionBoard({ focus }: { focus?: string }) {
         <h2 className="board-title">{headline[0]} <strong>{headline[1]}</strong></h2>
         <FileButton label="Upload a photo" accept="image/*" onFile={onPhoto} />
       </div>
-      <form className="inline-add" onSubmit={(e) => { e.preventDefault(); void addPin(); }}>
+      <form className="inline-add" noValidate onSubmit={(e) => { e.preventDefault(); void addPin(); }}>
         <label htmlFor="pinlink" className="sr">Paste a link to pin</label>
         <input id="pinlink" type="url" inputMode="url" autoCapitalize="off" className="field" value={pinDraft} onChange={(e) => setPinDraft(e.target.value)}
           onPaste={(e) => {
@@ -113,10 +114,18 @@ export function VisionBoard({ focus }: { focus?: string }) {
             {p.kind === 'photo' ? (
               <img src={p.src} alt="Pinned photo" loading="lazy" />
             ) : (
-              <a href={p.url} target="_blank" rel="noopener noreferrer" className="pin-link">
+              <a href={p.url} target="_blank" rel="noopener noreferrer" className="pin-link-wrap">
+                {p.cover && <img src={p.cover} alt="" loading="lazy" />}
+                <span className="pin-link">
                 <span className="lbl">Pinned link</span>
-                <span style={{ fontFamily: 'var(--serif)', fontSize: 20, paddingRight: 36 }}>{p.title}</span>
+                <span style={{ fontFamily: 'var(--serif)', fontSize: 20, paddingRight: p.cover ? 0 : 36 }}>{p.title}</span>
+                </span>
               </a>
+            )}
+            {p.kind === 'link' && (
+              <button type="button" className="icon-btn pin-edit" style={{ border: 'none' }} aria-label={`Edit ${p.title}`} onClick={() => setEditingPin(p)}>
+                <IconPencil />
+              </button>
             )}
             <button type="button" className="icon-btn pin-remove" style={{ border: 'none' }} aria-label={p.kind === 'photo' ? 'Remove photo' : `Remove ${p.title}`} onClick={() => { if (confirm('Remove this pin?')) void db.pins.delete(p.id); }}>
               <IconTrash />
@@ -205,6 +214,11 @@ export function VisionBoard({ focus }: { focus?: string }) {
         </form>
       </Sheet>
 
+      <TableEditor<Pin>
+        title="Edit pinned link" open={!!editingPin} onClose={() => setEditingPin(null)} table={db.pins} rows={editingPin ? [editingPin] : []}
+        fields={[{ key: 'cover', label: 'Cover photo', type: 'image' }, { key: 'title', label: 'Title', wide: true }, { key: 'url', label: 'Link', wide: true }]}
+        itemName={() => 'this pin'}
+      />
       <TableEditor<Restaurant>
         title="Edit restaurant" open={!!editingR} onClose={() => setEditingR(null)} table={db.restaurants} rows={editingR ? [editingR] : []}
         fields={[{ key: 'name', label: 'Name', wide: true }, { key: 'cuisine', label: 'Cuisine' }, { key: 'hood', label: 'Neighborhood' }, { key: 'list', label: 'List', type: 'select', options: [{ value: 'Want to try', label: 'Want to try' }, { value: 'Been, loved it', label: 'Been, loved it' }] }, { key: 'photo', label: 'Photo', type: 'image' }]}

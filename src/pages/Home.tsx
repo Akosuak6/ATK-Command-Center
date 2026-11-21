@@ -113,9 +113,12 @@ export function HomeToday() {
           <div>
             {dump.length === 0 && <p className="empty">Nothing dumped yet.</p>}
             {dump.slice(0, 3).map((d) => (
-              <a key={d.id} className="list-btn" href={hrefFor('dump', 'all', d.id)}>
-                <span className={`tag ${DUMP_TAG[d.type] ?? 't-plain'}`} style={{ alignSelf: 'flex-start' }}>{DUMP_LABEL[d.type] ?? d.type}</span>
-                <span style={{ fontSize: 14, fontWeight: 600 }}>{d.title}</span>
+              <a key={d.id} className="list-btn" href={hrefFor('dump', 'all', d.id)} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                {d.photo && <img src={d.photo} alt="" className="recent-thumb" />}
+                <span className="stack-s" style={{ gap: 4, flex: 1, minWidth: 0 }}>
+                  <span className={`tag ${DUMP_TAG[d.type] ?? 't-plain'}`} style={{ alignSelf: 'flex-start' }}>{DUMP_LABEL[d.type] ?? d.type}</span>
+                  <span style={{ fontSize: 14, fontWeight: 600 }}>{d.title}</span>
+                </span>
               </a>
             ))}
           </div>

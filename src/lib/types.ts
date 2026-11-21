@@ -14,6 +14,7 @@ export interface DumpItem {
   note: string;
   rating: number;
   comments: DumpComment[];
+  photo?: string; // cover image
 }
 
 export type Shelf = 'Read' | 'Reading' | 'Want to read';
@@ -49,6 +50,7 @@ export interface Pin {
   src?: string; // JPEG data URL for photos
   url?: string;
   title?: string;
+  cover?: string; // cover image for link pins
   date: string;
 }
 

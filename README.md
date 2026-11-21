@@ -28,6 +28,10 @@ After the first launch, the seed is never read again. Edit things in the app (ev
 
 Netlify works the same way (build `npm run build`, publish `dist`).
 
+## Link previews and covers
+
+`api/preview.js` reads a link's title and cover image, and `api/image.js` downloads the cover so the phone keeps its own copy (it still shows offline). Vercel runs both automatically from the `api/` folder. Without them, links still save, titled from the URL, and you can add a cover by hand with Edit.
+
 ## Backups
 
 Data lives only on the phone, so use Settings, Export backup about once a month. The app reminds you after 30 days. Import backup restores everything, including photos and tickets.

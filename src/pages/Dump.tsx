@@ -7,14 +7,14 @@ import { Chips, EditButton, Sheet, StarText, Stars, useToast } from '../componen
 import { TableEditor, type FieldDef } from '../components/ListEditor';
 import { useFocusItem } from '../components/Search';
 import { IconTrash } from '../components/Icons';
-import { fetchPreview } from '../lib/preview';
+import { previewWithCover } from '../lib/preview';
 
 export const DUMP_TYPES: DumpType[] = ['Article', 'Think piece', 'Substack', 'Perspective', 'Film', 'TV show'];
 export const DUMP_LABEL: Record<string, string> = { Article: 'Article', 'Think piece': 'Think piece', Substack: 'Substack', Perspective: 'New perspective', Film: 'Film', 'TV show': 'TV show' };
 const DUMP_PLURAL: Record<string, string> = { Article: 'Articles', 'Think piece': 'Think pieces', Substack: 'Substacks', Perspective: 'New perspectives', Film: 'Films', 'TV show': 'TV shows' };
 export const DUMP_TAG: Record<string, string> = { Article: 't-learn', 'Think piece': 't-work', Substack: 't-money', Perspective: 't-social', Film: 't-health', 'TV show': 't-health' };
 
-export async function addDumpItem(input: { url?: string; type?: DumpType; title?: string; note?: string }) {
+export async function addDumpItem(input: { url?: string; type?: DumpType; title?: string; note?: string; photo?: string }) {
   const url = input.url ? normalizeUrl(input.url) : '';
   const given = (input.title ?? '').trim();
   const item: DumpItem = {
@@ -26,14 +26,23 @@ export async function addDumpItem(input: { url?: string; type?: DumpType; title?
     date: todayISO(),
     note: (input.note ?? '').trim(),
     rating: 0,
-    comments: []
+    comments: [],
+    photo: input.photo
   };
   await db.dump.add(item);
-  if (url && !given) {
-    const p = await fetchPreview(url);
-    if (p?.title) await db.dump.update(item.id, { title: p.title, ...(p.siteName ? { source: p.siteName } : {}) });
-  }
+  if (url) void fillFromLink(item.id, url, !given, !input.photo);
   return item;
+}
+
+// Fill in the title, site and cover from the link preview, without blocking the paste.
+export async function fillFromLink(id: string, url: string, title: boolean, cover: boolean) {
+  const p = await previewWithCover(url);
+  const patch: Partial<DumpItem> = {};
+  if (title && p.title) patch.title = p.title;
+  if (title && p.siteName) patch.source = p.siteName;
+  if (cover && p.cover) patch.photo = p.cover;
+  if (Object.keys(patch).length) await db.dump.update(id, patch);
+  return Boolean(p.cover);
 }
 
 export function DumpAll({ focus }: { focus?: string }) {
@@ -42,6 +51,7 @@ export function DumpAll({ focus }: { focus?: string }) {
   const [form, setForm] = useState<{ url: string; type: DumpType; title: string; note: string }>({ url: '', type: 'Article', title: '', note: '' });
   const [filter, setFilter] = useState<'All' | DumpType>('All');
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [editingD, setEditingD] = useState<DumpItem | null>(null);
   useFocusItem(focus, dump.length > 0);
 
   const shown = dump.filter((d) => filter === 'All' || d.type === filter);
@@ -66,7 +76,7 @@ export function DumpAll({ focus }: { focus?: string }) {
 
   return (
     <div className="stack">
-      <form className="card" aria-labelledby="paste-h" onSubmit={(e) => { e.preventDefault(); void submit(); }}>
+      <form className="card" aria-labelledby="paste-h" noValidate onSubmit={(e) => { e.preventDefault(); void submit(); }}>
         <div className="row row-wrap"><h2 className="h2" id="paste-h">Paste a link</h2><span className="sub">Articles, think pieces, Substacks, films, TV, anything worth keeping</span></div>
         <label htmlFor="dlink" className="sr">Link</label>
         <input id="dlink" type="url" inputMode="url" autoCapitalize="off" autoCorrect="off" className="field" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="Paste a link from your phone" style={{ minHeight: 52, fontSize: 16 }} />
@@ -94,7 +104,12 @@ export function DumpAll({ focus }: { focus?: string }) {
       {shown.length === 0 && <p className="empty">Nothing here yet.</p>}
       <div className="masonry">
         {shown.map((d) => (
-          <article className="card" style={{ gap: 10 }} key={d.id} id={`item-${d.id}`}>
+          <article className={`card${d.photo ? ' has-cover' : ''}`} style={{ gap: 10 }} key={d.id} id={`item-${d.id}`}>
+            {d.photo && (
+              d.url
+                ? <a href={d.url} target="_blank" rel="noopener noreferrer" className="dump-cover" tabIndex={-1} aria-hidden="true"><img src={d.photo} alt="" loading="lazy" /></a>
+                : <span className="dump-cover"><img src={d.photo} alt="" loading="lazy" /></span>
+            )}
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
               <span className={`tag ${DUMP_TAG[d.type] ?? 't-plain'}`}>{DUMP_LABEL[d.type] ?? d.type}</span>
               <span className="sub" style={{ flex: 1 }}>{d.source} · {shortDate(d.date)}</span>
@@ -112,6 +127,16 @@ export function DumpAll({ focus }: { focus?: string }) {
             {d.comments.map((c, i) => (
               <div className="comment" key={i}><span>{c.text}</span><span className="sub" style={{ whiteSpace: 'nowrap' }}>{shortDate(c.date)}</span></div>
             ))}
+            <div className="card-actions">
+              <EditButton label={`Edit ${d.title}`} onClick={() => setEditingD(d)} />
+              {!d.photo && d.url && (
+                <button type="button" className="btn-text" onClick={async () => {
+                  toast('Looking for a cover');
+                  const found = await fillFromLink(d.id, d.url, false, true);
+                  toast(found ? 'Cover added' : 'No cover found. Tap Edit to paste one.');
+                }}>Find a cover</button>
+              )}
+            </div>
             <form className="inline-add" onSubmit={(e) => { e.preventDefault(); addComment(d); }}>
               <label htmlFor={`cm-${d.id}`} className="sr">Add a thought about {d.title}</label>
               <input id={`cm-${d.id}`} type="text" className="field" value={drafts[d.id] ?? ''} onChange={(e) => setDrafts({ ...drafts, [d.id]: e.target.value })} placeholder="Add a thought" />
@@ -120,6 +145,17 @@ export function DumpAll({ focus }: { focus?: string }) {
           </article>
         ))}
       </div>
+      <TableEditor<DumpItem>
+        title="Edit item" open={!!editingD} onClose={() => setEditingD(null)} table={db.dump} rows={editingD ? [editingD] : []}
+        fields={[
+          { key: 'photo', label: 'Cover photo', type: 'image' },
+          { key: 'title', label: 'Title', wide: true },
+          { key: 'type', label: 'What is it', type: 'select', options: DUMP_TYPES.map((t) => ({ value: t, label: DUMP_LABEL[t] })) },
+          { key: 'url', label: 'Link', wide: true },
+          { key: 'note', label: 'My take', type: 'textarea' }
+        ]}
+        itemName={(x) => `"${x.title}"`}
+      />
     </div>
   );
 }
