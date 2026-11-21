@@ -464,3 +464,11 @@ dialog.sheet[open] { display: flex; flex-direction: column; overflow: hidden; }
 .skin-steps li > span:first-child { display: block; }
 .skin-day { width: 40px; flex: none; font-family: var(--serif); font-size: 18px; }
 .line.is-today { background: #ECE5DA; margin: 0 -12px; padding-left: 12px; padding-right: 12px; border-radius: 8px; }
+
+/* Habits with a daily count */
+.habit-today { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.habit-pips { display: flex; gap: 6px; }
+.pip { width: 16px; height: 26px; border-radius: 5px 5px 7px 7px; border: 1.5px solid var(--navy-2); background: var(--card); }
+.pip.on { background: linear-gradient(180deg, var(--card) 0 18%, #6E8CC4 18% 100%); }
+.habit-day.partial { background: #DCE3EF; border-color: var(--navy-2); color: var(--navy); }
+.habit-count { font-size: 10px; font-weight: 600; }

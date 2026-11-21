@@ -120,7 +120,15 @@ export interface SkincareStep {
 
 export interface Facial { name: string; everyDays: number; last: string }
 
-export interface Habit { id: string; order: number; name: string; done: string[] }
+export interface Habit {
+  id: string;
+  order: number;
+  name: string;
+  done: string[]; // days the habit was fully done
+  target?: number; // times a day, e.g. 2 bottles of water (default 1)
+  unit?: string; // what one tap counts, e.g. "bottle"
+  counts?: Record<string, number>; // per day progress when target is above 1
+}
 
 export interface WishItem { id: string; text: string; tag: 'Book' | 'Try' | 'Buy' | 'Schedule'; done: boolean }
 

@@ -356,17 +356,40 @@ export function HealthRoutines() {
         <div className="stack-s" style={{ gap: 14 }}>
           {habits.map((x) => {
             const n = last7.filter((d) => x.done.includes(d)).length;
+            const target = Math.max(1, x.target ?? 1);
+            const countOn = (d: string) => (target > 1 ? x.counts?.[d] ?? (x.done.includes(d) ? target : 0) : x.done.includes(d) ? 1 : 0);
+            const setCount = (d: string, c: number) => {
+              const done = c >= target ? [...new Set([...x.done, d])] : x.done.filter((y) => y !== d);
+              void db.habits.update(x.id, { done, counts: { ...(x.counts ?? {}), [d]: c } });
+            };
+            const todayCount = countOn(today);
+            const unit = x.unit || 'time';
             return (
               <div className="goal" key={x.id}>
                 <div className="row"><span className="goal-t">{x.name}</span><span className={`pct${n < 4 ? ' bad-text' : ''}`}>{n} of 7</span></div>
                 <Bar value={pct(n, 7)} warn={n < 4} />
+                {target > 1 && (
+                  <div className="habit-today">
+                    <span className="habit-pips" aria-hidden="true">
+                      {Array.from({ length: target }, (_, i) => <span key={i} className={`pip${i < todayCount ? ' on' : ''}`} />)}
+                    </span>
+                    <span className="sub" style={{ flex: 1 }} aria-live="polite">Today {Math.min(todayCount, target)} of {target} {unit}{target === 1 ? '' : 's'}{todayCount >= target ? ', done' : ''}</span>
+                    {todayCount > 0 && <button type="button" className="btn-text" onClick={() => setCount(today, todayCount - 1)} aria-label={`Remove one ${unit}`}>Undo</button>}
+                    <button type="button" className="btn2" onClick={() => setCount(today, todayCount + 1)}>+ 1 {unit}</button>
+                  </div>
+                )}
                 <div className="habit-days" role="group" aria-label={`${x.name}, last 7 days`}>
-                  {last7.map((d) => (
-                    <button key={d} type="button" className="habit-day" aria-pressed={x.done.includes(d)} aria-label={`${x.name} on ${weekdayShort(d)} ${shortDate(d)}`}
-                      onClick={() => db.habits.update(x.id, { done: toggleIn(x.done, d) })}>
-                      <span>{d === today ? 'Today' : weekdayShort(d)}</span>
-                    </button>
-                  ))}
+                  {last7.map((d) => {
+                    const c = countOn(d);
+                    return (
+                      <button key={d} type="button" className={`habit-day${c > 0 && c < target ? ' partial' : ''}`} aria-pressed={c >= target}
+                        aria-label={`${x.name} on ${weekdayShort(d)} ${shortDate(d)}${target > 1 ? `, ${c} of ${target}` : ''}`}
+                        onClick={() => (target > 1 ? setCount(d, (c + 1) % (target + 1)) : db.habits.update(x.id, { done: toggleIn(x.done, d) }))}>
+                        <span>{d === today ? 'Today' : weekdayShort(d)}</span>
+                        {target > 1 && <span className="habit-count">{c}/{target}</span>}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             );
@@ -402,8 +425,8 @@ export function HealthRoutines() {
       />
       <TableEditor<Habit>
         title="Edit habits" open={edit === 'habits'} onClose={() => setEdit('')} table={db.habits} rows={habits}
-        fields={[{ key: 'name', label: 'Habit', wide: true }, { key: 'order', label: 'Order', type: 'number' }]}
-        itemName={(x) => x.name} addLabel="Add a habit" make={() => ({ order: habits.length + 1, name: '', done: [] })}
+        fields={[{ key: 'name', label: 'Habit', wide: true }, { key: 'target', label: 'Times a day (1 for a simple check)', type: 'number' }, { key: 'unit', label: 'What one tap counts (optional)', placeholder: 'bottle' }, { key: 'order', label: 'Order', type: 'number' }]}
+        itemName={(x) => x.name} addLabel="Add a habit" make={() => ({ order: habits.length + 1, name: '', done: [], target: 1 })}
       />
       <TableEditor<WishItem>
         title="Edit wishlist" open={edit === 'wish'} onClose={() => setEdit('')} table={db.wishlist} rows={wishlist}

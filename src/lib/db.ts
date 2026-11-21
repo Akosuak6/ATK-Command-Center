@@ -87,6 +87,19 @@ export class CommandCenterDB extends Dexie {
         else if (!cur.pastVisits && r.pastVisits) await tx.table('studios').update(r.id, { pastVisits: r.pastVisits });
       }
     });
+    // Version 5: replace the untouched sample supplements and habits with the seed ones.
+    this.version(5).stores({}).upgrade(async (tx) => {
+      const data = seed as Record<string, { id: string }[] | undefined>;
+      for (const [table, sample] of [['supplements', /^sp\d+$/], ['habits', /^h\d+$/]] as const) {
+        const rows = data[table];
+        if (!rows?.length || rows.every((r) => sample.test(r.id))) continue;
+        const current = (await tx.table(table).toArray()) as { id: string }[];
+        if (current.length === 0 || current.every((r) => sample.test(r.id))) {
+          await tx.table(table).clear();
+          await tx.table(table).bulkAdd(rows);
+        }
+      }
+    });
     this.on('populate', (tx) => {
       const data = resolveTokens(seed, todayISO()) as Record<string, unknown>;
       for (const [name, rows] of Object.entries(data)) {
