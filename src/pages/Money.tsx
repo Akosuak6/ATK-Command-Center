@@ -7,7 +7,7 @@ import type { Account, Bill, BudgetCategory, MoneySnapshot, RoadmapItem, Savings
 import { Bar, Chips, EditButton, FileButton, useToast } from '../components/ui';
 import { ListEditor, TableEditor, type FieldDef } from '../components/ListEditor';
 import { BarChart, ProjectionChart, SERIES, SERIES_OTHER, StackedBar, type Segment } from '../components/Charts';
-import { importExport, incomeByMonth, incomeSources, liveLeftToSpend, useExportSpend, type ImportSummary } from '../lib/money';
+import { SPECIAL, needsReview, payee, importExport, incomeByMonth, incomeSources, liveLeftToSpend, useExportSpend, type ImportSummary } from '../lib/money';
 import { Sheet } from '../components/ui';
 import { longDate } from '../lib/format';
 
@@ -18,10 +18,10 @@ export function useLiveMoney() {
   const budget = useTable(db.budget, 'order');
   const classes = useTable(db.classes);
   const snap = useMeta<MoneySnapshot>('moneySnapshot', EMPTY_SNAP);
-  const { spent, txns, map } = useExportSpend();
+  const { spent, txns, map, rules } = useExportSpend();
   const spentFor = (c: BudgetCategory) => budgetSpent(c, classes, spent);
   const { left, live } = liveLeftToSpend(budget, spentFor, snap.leftToSpend);
-  return { budget, classes, snap, spent, txns, map, spentFor, left, live };
+  return { budget, classes, snap, spent, txns, map, rules, spentFor, left, live };
 }
 
 function IncomeSection() {
@@ -283,6 +283,7 @@ export function MoneyBudget() {
           {result.impacts.length === 0 && <span className="sub">Add savings goals with a monthly amount to see the impact.</span>}
         </div>
       </section>
+      <ReviewPayments />
       <TableEditor<BudgetCategory>
         title="Edit budget categories" open={editing} onClose={() => setEditing(false)} table={db.budget} rows={budget} fields={budgetFields}
         itemName={(c) => c.label} addLabel="Add a category" make={() => ({ order: budget.length + 1, label: '', budget: 0, spent: 0, source: 'manual' })}
@@ -337,6 +338,7 @@ export function MoneyGoals() {
   const total = segments.reduce((a, x) => a + x.value, 0);
   const colorFor = (g: SavingsGoal) => ({ retirement: SERIES[0], savings: SERIES[1], brokerage: SERIES[2] } as Record<string, string>)[kindOf(g)] ?? SERIES_OTHER;
   const paused = savings.filter((g) => g.contributing === false);
+  const invested = useExportSpend().spent[SPECIAL.INVEST] ?? 0;
 
   return (
     <div className="stack">
@@ -363,6 +365,7 @@ export function MoneyGoals() {
               </li>
             )}
           </ol>
+          {invested > 0 && <p className="sub" style={{ marginTop: 8 }}><strong>Moved to investments this month:</strong> {money(invested)}, from your export. This counts as saving, not spending.</p>}
           {paused.map((g) => (
             <p className="sub" key={g.id} style={{ marginTop: 8 }}><strong>{g.name}:</strong> {money(g.saved)} stays invested and keeps growing. No new contributions{g.note ? `, ${g.note.charAt(0).toLowerCase()}${g.note.slice(1)}` : ''}.</p>
           ))}
@@ -541,5 +544,77 @@ export function TripPlanner({ tripId }: { tripId?: string }) {
         itemName={(t) => t.label} addLabel="Add a trim" make={() => ({ order: trims.length + 1, label: '', how: '', cap: 0 })}
       />
     </div>
+  );
+}
+
+// Venmo and Zelle payments Rocket Money cannot place. You choose once; Zelle names can become a rule.
+function ReviewPayments() {
+  const { txns, budget, rules } = useLiveMoney();
+  const toast = useToast();
+  const [always, setAlways] = useState<Record<string, boolean>>({});
+  const since = addDays(todayISO(), -120);
+  const queue = txns.filter((t) => t.date >= since && needsReview(t, rules)).sort((a, b) => b.date.localeCompare(a.date));
+  const shown = queue.slice(0, 12);
+  const options = [
+    ...budget.map((b) => ({ value: b.label, label: b.label })),
+    { value: SPECIAL.MOVED, label: 'Moved to my own account' },
+    { value: SPECIAL.INVEST, label: 'Invested (E*Trade and similar)' },
+    { value: SPECIAL.IGNORE, label: 'Leave out of the budget' }
+  ];
+  const choose = async (id: string, name: string, value: string) => {
+    if (!value) return;
+    const who = payee(name);
+    if (who && always[id]) {
+      await setMeta('payeeRules', [...rules.filter((r) => r.match.toLowerCase() !== who.toLowerCase()), { match: who, label: value }]);
+      toast(`Payments to ${who} will always count as ${options.find((o) => o.value === value)?.label}`);
+    } else {
+      await db.transactions.update(id, { label: value });
+    }
+  };
+  if (!queue.length && !rules.length) return null;
+  return (
+    <section className="card" aria-labelledby="review-h" style={{ gridColumn: '1 / -1' }}>
+      <div className="row row-wrap"><h2 className="h2" id="review-h">Needs a look</h2><span className="sub">{queue.length ? `${queue.length} Venmo and Zelle payments to sort` : 'All sorted'}</span></div>
+      {queue.length > 0 && <p className="body">Rocket Money cannot tell what these were for. Pick where each one belongs, and it updates your budget.</p>}
+      <div>
+        {shown.map((t) => {
+          const who = payee(t.name);
+          return (
+            <div className="review-row" key={t.id}>
+              <span className="line-main">
+                <strong style={{ fontSize: 14 }}>{who ? `${/zelle/i.test(t.name) ? 'Zelle' : 'Payment'} to ${who}` : /venmo/i.test(t.name) ? 'Venmo payment' : t.name}</strong>
+                <span className="sub">{shortDate(t.date)} · {t.account}{t.category && t.category !== 'Uncategorized' ? ` · Rocket Money says ${t.category}` : ''}</span>
+              </span>
+              <span className="review-amt">{money(t.amount)}</span>
+              <div className="review-pick">
+                <label className="sr" htmlFor={`rv-${t.id}`}>Where this belongs</label>
+                <select id={`rv-${t.id}`} className="field" defaultValue="" onChange={(e) => void choose(t.id, t.name, e.target.value)}>
+                  <option value="" disabled>Where does this belong?</option>
+                  {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+                {who && (
+                  <label className="always">
+                    <input type="checkbox" checked={!!always[t.id]} onChange={(e) => setAlways({ ...always, [t.id]: e.target.checked })} />
+                    Always for {who}
+                  </label>
+                )}
+              </div>
+            </div>
+          );
+        })}
+        {queue.length > shown.length && <p className="sub" style={{ marginTop: 8 }}>{queue.length - shown.length} more after these.</p>}
+      </div>
+      {rules.length > 0 && (
+        <details>
+          <summary className="btn-text" style={{ paddingLeft: 0, display: 'inline-flex', alignItems: 'center' }}>Your rules ({rules.length})</summary>
+          {rules.map((r) => (
+            <div className="line" key={r.match}>
+              <span>Payments to {r.match}: {options.find((o) => o.value === r.label)?.label ?? r.label}</span>
+              <button type="button" className="btn-text btn-danger" onClick={() => setMeta('payeeRules', rules.filter((x) => x.match !== r.match))}>Remove</button>
+            </div>
+          ))}
+        </details>
+      )}
+    </section>
   );
 }

@@ -483,3 +483,10 @@ dialog.sheet[open] { display: flex; flex-direction: column; overflow: hidden; }
 .lever-amt { font-weight: 600; min-width: 64px; text-align: right; white-space: nowrap; }
 .lever-list .line-main strong { line-height: 1.25; }
 @media (max-width: 760px) { .lever-list .tag { display: none; } }
+.review-row { display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; padding: 12px 0; border-bottom: 1px solid var(--divider); align-items: center; }
+.review-row:last-child { border-bottom: none; }
+.review-amt { font-weight: 600; }
+.review-pick { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.review-pick .field { flex: 1 1 220px; }
+.always { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; min-height: 44px; }
+.always input { width: 20px; height: 20px; }

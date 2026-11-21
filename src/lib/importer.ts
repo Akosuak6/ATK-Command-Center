@@ -38,7 +38,10 @@ function toNumber(v: unknown): number {
   return Number.isFinite(n) ? (neg ? -n : n) : NaN;
 }
 
-export const TRANSFER = /transfer|credit card payment|card payment|investment/i;
+export const TRANSFER = /transfer|credit card payment|card payment/i;
+// Money moved to an investment account is saving, not spending.
+export const INVEST = /e\s?\*?\s?trade|etrade|morgan stanley|fidelity|vanguard|schwab|robinhood|betterment|wealthfront|acorns|m1 finance|merrill/i;
+export const PEER = /venmo|zelle|cash app|square cash|paypal/i;
 
 export function kindFor(category: string, amount: number): Transaction['kind'] {
   if (/^income$/i.test(category.trim())) return 'income';
@@ -115,7 +118,7 @@ export async function parseExport(file: File): Promise<ParsedExport> {
       name: r.name,
       amount: Math.round(r.amount * 100) / 100,
       category: r.category,
-      kind: r.ignored ? 'ignored' : ownTransfer(r) ? 'transfer' : kindFor(r.category, r.amount),
+      kind: r.ignored ? 'ignored' : INVEST.test(r.name) && r.amount > 0 ? 'invest' : /^investment/i.test(r.category) ? 'invest' : ownTransfer(r) ? 'transfer' : kindFor(r.category, r.amount),
       note: r.note
     };
   });

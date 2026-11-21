@@ -108,9 +108,12 @@ export interface Transaction {
   name: string;
   amount: number;
   category: string; // Rocket Money category
-  kind: 'spend' | 'income' | 'transfer' | 'ignored';
+  kind: 'spend' | 'income' | 'transfer' | 'invest' | 'ignored';
   note: string;
+  label?: string; // your choice: a budget category, or MOVED (own account), INVEST, or IGNORE
 }
+
+export interface PayeeRule { match: string; label: string }
 
 export type SavingsKind = 'retirement' | 'savings' | 'brokerage' | 'other';
 export interface SavingsGoal {

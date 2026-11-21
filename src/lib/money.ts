@@ -1,7 +1,8 @@
 import { db, getMeta, setMeta, useMeta, useTable } from './db';
 import { parseExport, sourceName } from './importer';
 import { todayISO } from './format';
-import type { BudgetCategory, MoneySnapshot, Transaction } from './types';
+import type { BudgetCategory, MoneySnapshot, PayeeRule, Transaction } from './types';
+import { PEER } from './importer';
 
 // Rocket Money category -> your budget category. "Ignore" leaves it out of the budget.
 // You can change any of these in Monthly budget, Category mapping.
@@ -31,13 +32,39 @@ export const useCategoryMap = () => ({ ...DEFAULT_MAP, ...useMeta<Record<string,
 
 const monthOf = (iso: string) => iso.slice(0, 7);
 
+// Who a Zelle or similar payment went to, when the bank includes it ("Zelle payment to Mom" -> "Mom").
+export function payee(name: string): string {
+  const clean = name.replace(/[^\x20-\x7E]/g, '');
+  const m = /(?:payment|transfer|sent)?\s*(?:to|from)\s+(.+)$/i.exec(clean);
+  if (!m || !PEER.test(name)) return '';
+  return m[1].replace(/\s+(JPM\w+|\d{6,}|ON \d.*)$/i, '').replace(/\s+/g, ' ').trim();
+}
+
+export const SPECIAL = { MOVED: 'MOVED', INVEST: 'INVEST', IGNORE: 'IGNORE' } as const;
+
+// The budget category a transaction counts toward, after your choices and rules.
+export function labelFor(t: Transaction, map: Record<string, string>, rules: PayeeRule[]): string {
+  if (t.label) return t.label;
+  const who = payee(t.name).toLowerCase();
+  const rule = rules.find((r) => who && who.includes(r.match.toLowerCase()));
+  if (rule) return rule.label;
+  return map[t.category] ?? 'Unmapped';
+}
+
+export const needsReview = (t: Transaction, rules: PayeeRule[] = []) => {
+  if (t.kind !== 'spend' || t.label || !PEER.test(t.name)) return false;
+  const who = payee(t.name).toLowerCase();
+  return !rules.some((r) => who && who.includes(r.match.toLowerCase()));
+};
+
 // Spending this month per budget category, from imported transactions.
-export function spendByBudget(txns: Transaction[], map: Record<string, string>, month = monthOf(todayISO())) {
+export function spendByBudget(txns: Transaction[], map: Record<string, string>, month = monthOf(todayISO()), rules: PayeeRule[] = []) {
   const out: Record<string, number> = {};
   for (const t of txns) {
-    if (t.kind !== 'spend' || monthOf(t.date) !== month) continue;
-    const label = map[t.category] ?? 'Unmapped';
-    if (label === 'Ignore') continue;
+    if (monthOf(t.date) !== month) continue;
+    const label = labelFor(t, map, rules);
+    if (t.kind === 'invest' || label === SPECIAL.INVEST) { out[SPECIAL.INVEST] = (out[SPECIAL.INVEST] ?? 0) + t.amount; continue; }
+    if (t.kind !== 'spend' || label === 'Ignore' || label === SPECIAL.MOVED || label === SPECIAL.IGNORE) continue;
     out[label] = (out[label] ?? 0) + t.amount;
   }
   return out;
@@ -46,7 +73,8 @@ export function spendByBudget(txns: Transaction[], map: Record<string, string>, 
 export function useExportSpend() {
   const txns = useTable(db.transactions);
   const map = useCategoryMap();
-  return { spent: spendByBudget(txns, map), txns, map };
+  const rules = useMeta<PayeeRule[]>('payeeRules', []);
+  return { spent: spendByBudget(txns, map, undefined, rules), txns, map, rules };
 }
 
 export interface ImportSummary { added: number; already: number; income: number; spending: number; from: string; to: string; accounts: string[] }
