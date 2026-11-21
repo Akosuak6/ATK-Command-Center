@@ -103,7 +103,7 @@ export class CommandCenterDB extends Dexie {
     this.on('populate', (tx) => {
       const data = resolveTokens(seed, todayISO()) as Record<string, unknown>;
       for (const [name, rows] of Object.entries(data)) {
-        if (name.startsWith('_')) continue;
+        if (name.startsWith('_') || (name !== 'meta' && !this.tables.some((t) => t.name === name))) continue;
         if (name === 'meta') {
           const entries = Object.entries(rows as Record<string, unknown>).map(([key, value]) => ({ key, value }));
           void tx.table('meta').bulkAdd([...entries, { key: 'seededAt', value: new Date().toISOString() }]);
@@ -116,6 +116,24 @@ export class CommandCenterDB extends Dexie {
 }
 
 export const db = new CommandCenterDB();
+
+// Small corrections to seed data that already reached a phone. Each patch runs once, and only
+// when the row still looks the way the seed left it, so anything you edited yourself is kept.
+interface SeedPatch { id: string; table: string; row: string; from: Record<string, unknown>; set: Record<string, unknown> }
+
+export async function applySeedPatches() {
+  const patches = ((seed as { patches?: SeedPatch[] }).patches ?? []).filter((p) => db.tables.some((t) => t.name === p.table));
+  if (!patches.length) return;
+  const applied = new Set(((await db.meta.get('appliedPatches'))?.value as string[] | undefined) ?? []);
+  for (const p of patches) {
+    if (applied.has(p.id)) continue;
+    const table = db.table(p.table);
+    const current = (await table.get(p.row)) as Record<string, unknown> | undefined;
+    if (current && Object.entries(p.from).every(([k, v]) => current[k] === v)) await table.update(p.row, p.set);
+    applied.add(p.id);
+  }
+  await db.meta.put({ key: 'appliedPatches', value: [...applied] });
+}
 
 export const STORE_NAMES = db.tables.map((t) => t.name);
 
