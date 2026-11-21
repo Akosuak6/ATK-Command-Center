@@ -142,7 +142,8 @@ export interface SavingsGoal {
 
 export interface RoadmapItem { id: string; year: string; title: string; detail: string; tag: string }
 
-export interface Account { id: string; order: number; name: string; balance: number }
+export type AccountGroup = 'Cash' | 'Savings' | 'Investments' | 'Retirement' | 'Debt';
+export interface Account { id: string; order: number; name: string; balance: number; group?: AccountGroup; institution?: string; asOf?: string }
 
 export interface Bill { id: string; name: string; due: string; amount: number; note: string; repeat?: 'monthly' | '' }
 

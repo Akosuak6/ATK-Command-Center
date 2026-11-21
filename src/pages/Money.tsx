@@ -136,11 +136,26 @@ export function MoneyOverview() {
           <FileButton label={importing ? 'Reading your export' : "Upload this week's export"} accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onFile={(f) => void onExport(f)} />
         </section>
         <section className="card" aria-labelledby="acct-h">
-          <div className="row"><h2 className="h2" id="acct-h">Accounts</h2><span className="sub">{snap.asOf ? `As of ${shortDate(snap.asOf)}` : ''}</span></div>
+          <div className="row"><h2 className="h2" id="acct-h">Accounts</h2><span className="sub">Net worth {money(accounts.reduce((s, a) => s + a.balance, 0))}</span></div>
           <div>
-            {accounts.map((a) => <div className="line" key={a.id}><span>{a.name}</span><span style={{ fontWeight: 600 }}>{money(a.balance)}</span></div>)}
+            {(['Cash', 'Savings', 'Investments', 'Retirement', 'Debt'] as const).map((g) => {
+              const rows = accounts.filter((a) => (a.group ?? (a.balance < 0 ? 'Debt' : 'Cash')) === g);
+              if (!rows.length) return null;
+              return (
+                <div key={g} className="acct-group">
+                  <div className="row"><span className="lbl">{g}</span><span className="lbl">{money(rows.reduce((s, a) => s + a.balance, 0))}</span></div>
+                  {rows.map((a) => (
+                    <div className="line" key={a.id}>
+                      <span className="line-main"><span>{a.name}</span>{a.institution && <span className="sub">{a.institution}</span>}</span>
+                      <span style={{ fontWeight: 600 }}>{money(a.balance)}</span>
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
             {accounts.length === 0 && <p className="empty">No accounts yet.</p>}
           </div>
+          {accounts[0]?.asOf && <span className="sub">Balances as of {shortDate(accounts[0].asOf)}. Update them with Edit when you check Rocket Money.</span>}
           <EditButton label="Edit accounts" onClick={() => setEdit('accounts')} />
         </section>
         <section className="card" aria-labelledby="bills-h">
@@ -178,7 +193,7 @@ export function MoneyOverview() {
       />
       <TableEditor<Account>
         title="Edit accounts" open={edit === 'accounts'} onClose={() => setEdit('')} table={db.accounts} rows={accounts}
-        fields={[{ key: 'name', label: 'Account' }, { key: 'balance', label: 'Balance (negative for debt)', type: 'number' }]}
+        fields={[{ key: 'name', label: 'Account' }, { key: 'balance', label: 'Balance (negative for debt)', type: 'number' }, { key: 'group', label: 'Kind', type: 'select', options: ['Cash', 'Savings', 'Investments', 'Retirement', 'Debt'].map((v) => ({ value: v, label: v })) }, { key: 'institution', label: 'Bank or broker' }, { key: 'asOf', label: 'Balance as of', type: 'date' }]}
         itemName={(a) => a.name} addLabel="Add an account" make={() => ({ order: accounts.length + 1, name: '', balance: 0 })}
       />
       <TableEditor<Bill>

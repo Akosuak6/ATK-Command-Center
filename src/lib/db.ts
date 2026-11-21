@@ -88,6 +88,15 @@ export class CommandCenterDB extends Dexie {
         else if (!cur.pastVisits && r.pastVisits) await tx.table('studios').update(r.id, { pastVisits: r.pastVisits });
       }
     });
+    // Version 10: replace the untouched sample accounts with the seed ones.
+    this.version(10).stores({}).upgrade(async (tx) => {
+      const rows = (seed as { accounts?: { id: string }[] }).accounts ?? [];
+      const current = (await tx.table('accounts').toArray()) as { id: string }[];
+      if (rows.length && !rows.every((r) => /^a\d+$/.test(r.id)) && (current.length === 0 || current.every((r) => /^a\d+$/.test(r.id)))) {
+        await tx.table('accounts').clear();
+        await tx.table('accounts').bulkAdd(rows);
+      }
+    });
     // Version 9: replace untouched sample trips, trims and bills with the seed ones.
     this.version(9).stores({}).upgrade(async (tx) => {
       const data = seed as Record<string, { id: string }[] | undefined>;
