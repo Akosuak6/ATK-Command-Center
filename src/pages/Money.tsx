@@ -7,7 +7,7 @@ import type { Account, Bill, BudgetCategory, MoneySnapshot, RoadmapItem, Savings
 import { Bar, Chips, EditButton, FileButton, useToast } from '../components/ui';
 import { ListEditor, TableEditor, type FieldDef } from '../components/ListEditor';
 import { BarChart, ProjectionChart, SERIES, SERIES_OTHER, StackedBar, type Segment } from '../components/Charts';
-import { SPECIAL, needsReview, payee, importExport, incomeByMonth, incomeSources, liveLeftToSpend, useExportSpend, type ImportSummary } from '../lib/money';
+import { SPECIAL, needsReview, payee, usualByLabel, type SavingsPlan, importExport, incomeByMonth, incomeSources, liveLeftToSpend, useExportSpend, type ImportSummary } from '../lib/money';
 import { Sheet } from '../components/ui';
 import { longDate } from '../lib/format';
 
@@ -196,7 +196,10 @@ export function useImpactGoals() {
 }
 
 export function MoneyBudget() {
-  const { budget, classes, spentFor, left, live, txns, map, spent: exportSpent } = useLiveMoney();
+  const { budget, classes, spentFor, left, live, txns, map, rules, spent: exportSpent } = useLiveMoney();
+  const usual = usualByLabel(txns, map, rules);
+  const plan = useMeta<SavingsPlan>('savingsPlan', { takeHome: 0, saveFirst: 0 });
+  const [editPlan, setEditPlan] = useState(false);
   const impactGoals = useImpactGoals();
   const [editing, setEditing] = useState(false);
   const [mapping, setMapping] = useState(false);
@@ -217,6 +220,12 @@ export function MoneyBudget() {
 
   return (
     <div className="grid2">
+      <SavingsFirst plan={plan} budgetTotal={budgetTotal} usualTotal={budget.reduce((a, c) => a + (c.source === 'export' ? usual[c.label] ?? 0 : 0), 0)} budgetedExport={budget.reduce((a, c) => a + (c.source === 'export' ? c.budget : 0), 0)} onEdit={() => setEditPlan(true)} />
+      <ListEditor<SavingsPlan & { id: string }>
+        title="Savings plan" open={editPlan} onClose={() => setEditPlan(false)} rows={[{ id: 'plan', ...plan }]}
+        fields={[{ key: 'takeHome', label: 'Take home pay a month', type: 'number' }, { key: 'saveFirst', label: 'Set aside first each month', type: 'number' }]}
+        onSave={({ id: _id, ...rest }) => setMeta('savingsPlan', rest)}
+      />
       <section className="card" aria-labelledby="budget-h">
         <div className="row"><h2 className="h2" id="budget-h">{monthName()} budget</h2><span className="sub">{money(spentTotal)} of {money(budgetTotal)}</span></div>
         <div className="stack-s" style={{ gap: 12 }}>
@@ -226,6 +235,7 @@ export function MoneyBudget() {
                 <span className="goal-t">{c.label}</span>
                 <span style={{ fontSize: 12 }} className={over ? 'bad-text' : 'pct'}>{money(spent)} / {money(c.budget)}{over ? ', over' : ''}</span>
               </div>
+              {c.source === 'export' && usual[c.label] > c.budget && <span className="sub">You usually spend {money(usual[c.label])}, this saves {money(usual[c.label] - c.budget)} a month</span>}
               <Bar value={pct(spent, c.budget)} warn={over} />
               {c.source === 'classes' && <span className="sub">Pulled from your class log, {monthClasses} classes this month</span>}
               {c.source === 'export' && <span className="sub">From your Rocket Money export</span>}
@@ -339,6 +349,7 @@ export function MoneyGoals() {
   const colorFor = (g: SavingsGoal) => ({ retirement: SERIES[0], savings: SERIES[1], brokerage: SERIES[2] } as Record<string, string>)[kindOf(g)] ?? SERIES_OTHER;
   const paused = savings.filter((g) => g.contributing === false);
   const invested = useExportSpend().spent[SPECIAL.INVEST] ?? 0;
+  const plan = useMeta<SavingsPlan>('savingsPlan', { takeHome: 0, saveFirst: 0 });
 
   return (
     <div className="stack">
@@ -365,6 +376,13 @@ export function MoneyGoals() {
               </li>
             )}
           </ol>
+          {plan.saveFirst > 0 && (
+            <p className={`sub${total - plan.saveFirst >= 10 ? ' bad-text' : ''}`} style={{ marginTop: 8 }}>
+              {Math.abs(total - plan.saveFirst) < 10
+                ? `All ${money(plan.saveFirst)} you set aside each month has a place.`
+                : `${money(total)} of the ${money(plan.saveFirst)} you set aside each month is assigned${total < plan.saveFirst ? `, ${money(plan.saveFirst - total)} still to place` : `, ${money(total - plan.saveFirst)} more than your plan`}.`}
+            </p>
+          )}
           {invested > 0 && <p className="sub" style={{ marginTop: 8 }}><strong>Moved to investments this month:</strong> {money(invested)}, from your export. This counts as saving, not spending.</p>}
           {paused.map((g) => (
             <p className="sub" key={g.id} style={{ marginTop: 8 }}><strong>{g.name}:</strong> {money(g.saved)} stays invested and keeps growing. No new contributions{g.note ? `, ${g.note.charAt(0).toLowerCase()}${g.note.slice(1)}` : ''}.</p>
@@ -615,6 +633,28 @@ function ReviewPayments() {
           ))}
         </details>
       )}
+    </section>
+  );
+}
+
+// Pay yourself first: savings come off the top, spending gets what is left.
+function SavingsFirst({ plan, budgetTotal, usualTotal, budgetedExport, onEdit }: { plan: SavingsPlan; budgetTotal: number; usualTotal: number; budgetedExport: number; onEdit: () => void }) {
+  if (!plan.takeHome && !plan.saveFirst) return null;
+  const rate = plan.takeHome ? Math.round((plan.saveFirst / plan.takeHome) * 100) : 0;
+  const rest = plan.takeHome - plan.saveFirst - budgetTotal;
+  const cut = usualTotal - budgetedExport;
+  return (
+    <section className="card" aria-labelledby="first-h" style={{ gridColumn: '1 / -1' }}>
+      <div className="row row-wrap"><h2 className="h2" id="first-h">Savings first</h2><span className="tag t-health">{rate}% saved</span></div>
+      <p className="body">On payday, {money(plan.saveFirst)} moves to your savings order before you spend anything. The budget below is what is left to live on.</p>
+      <div className="plan-flow">
+        <div><span className="lbl">Take home</span><span className="num">{money(plan.takeHome)}</span></div>
+        <div><span className="lbl">Save first</span><span className="num good-text">{money(plan.saveFirst)}</span></div>
+        <div><span className="lbl">Spending budget</span><span className="num">{money(budgetTotal)}</span></div>
+        <div><span className="lbl">{rest >= 0 ? 'Left for rent and bills' : 'Short'}</span><span className={`num${rest < 0 ? ' bad-text' : ''}`}>{money(Math.abs(rest))}</span></div>
+      </div>
+      {cut > 0 && <p className="note-box tone-good">This budget spends <strong>{money(cut)} less a month</strong> than you usually do, which is {money(cut * 12)} a year toward your goals.</p>}
+      <div><EditButton label="Edit savings plan" onClick={onEdit} /></div>
     </section>
   );
 }

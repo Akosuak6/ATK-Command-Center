@@ -146,3 +146,23 @@ export function liveLeftToSpend(budget: BudgetCategory[], spentFor: (c: BudgetCa
   const spent = budget.reduce((a, c) => a + spentFor(c), 0);
   return { left: Math.round(total - spent), live };
 }
+
+// What you usually spend a month per budget category: the middle value over the last six full months.
+export function usualByLabel(txns: Transaction[], map: Record<string, string>, rules: PayeeRule[] = [], months = 6, ref = new Date()) {
+  const per: Record<string, number[]> = {};
+  for (let i = 1; i <= months; i++) {
+    const d = new Date(ref.getFullYear(), ref.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    if (!txns.some((t) => t.date.startsWith(key))) continue;
+    const spent = spendByBudget(txns, map, key, rules);
+    for (const label of new Set([...Object.keys(spent), ...Object.keys(per)])) (per[label] ??= []).push(spent[label] ?? 0);
+  }
+  const out: Record<string, number> = {};
+  for (const [label, vals] of Object.entries(per)) {
+    const s = vals.slice().sort((a, b) => a - b);
+    out[label] = Math.round(s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2);
+  }
+  return out;
+}
+
+export interface SavingsPlan { takeHome: number; saveFirst: number }

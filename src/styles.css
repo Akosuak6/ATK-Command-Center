@@ -496,3 +496,6 @@ dialog.sheet[open] { display: flex; flex-direction: column; overflow: hidden; }
 .book-found { display: flex; gap: 12px; padding: 12px; border-radius: 12px; background: var(--olive-bg); }
 .book-found img { width: 72px; height: 108px; object-fit: cover; border-radius: 3px 8px 8px 3px; flex: none; }
 .book-more summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--navy-2); min-height: 32px; display: flex; align-items: center; }
+.plan-flow { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+.plan-flow > div { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: 12px; background: #ECE5DA; }
+.plan-flow .num { font-size: clamp(22px, 6vw, 30px); white-space: nowrap; }
