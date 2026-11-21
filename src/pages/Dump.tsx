@@ -8,6 +8,7 @@ import { TableEditor, type FieldDef } from '../components/ListEditor';
 import { useFocusItem } from '../components/Search';
 import { IconTrash } from '../components/Icons';
 import { previewWithCover } from '../lib/preview';
+import { bookshopSearch, lookupBook, type BookInfo } from '../lib/books';
 import { linkKind } from '../lib/links';
 import { LinkMedia } from '../components/LinkMedia';
 
@@ -182,32 +183,61 @@ const bookFields: FieldDef<Book>[] = [
   { key: 'status', label: 'Shelf', type: 'select', options: (['Read', 'Reading', 'Want to read'] as Shelf[]).map((s) => ({ value: s, label: SHELF_LABEL[s] })) },
   { key: 'stars', label: 'Stars (0 to 5)', type: 'number' },
   { key: 'date', label: 'Finished or added', type: 'date' },
-  { key: 'review', label: 'Review', type: 'textarea' }
+  { key: 'review', label: 'Review', type: 'textarea' },
+  { key: 'cover', label: 'Cover', type: 'image' },
+  { key: 'tldr', label: 'In short', type: 'textarea' },
+  { key: 'description', label: 'About the book', type: 'textarea' },
+  { key: 'buyUrl', label: 'Where to buy (link)', wide: true },
+  { key: 'store', label: 'Store' },
+  { key: 'price', label: 'Price', type: 'number' }
 ];
+
+type BookForm = { title: string; author: string; status: Shelf; stars: number; review: string } & Partial<BookInfo>;
 
 export function Bookshelf({ focus }: { focus?: string }) {
   const books = useTable(db.books, 'date', true);
   const goal = useMeta<number>('readingGoal', 20);
   const toast = useToast();
-  const empty = { title: '', author: '', status: 'Read' as Shelf, stars: 0, review: '' };
-  const [form, setForm] = useState(empty);
+  const empty: BookForm = { title: '', author: '', status: 'Want to read', stars: 0, review: '' };
+  const [form, setForm] = useState<BookForm>(empty);
+  const [lookup, setLookup] = useState('');
+  const [busy, setBusy] = useState(false);
   const [filter, setFilter] = useState<'All' | Shelf>('All');
   const [editing, setEditing] = useState<Book | null>(null);
-  const [writing, setWriting] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [finding, setFinding] = useState<string | null>(null);
   useFocusItem(focus, books.length > 0);
 
   const read = readThisYear(books).length;
   const shown = books.filter((b) => filter === 'All' || b.status === filter);
 
+  const find = async () => {
+    if (!lookup.trim()) { toast('Paste a link or type a title first'); return; }
+    setBusy(true);
+    const info = await lookupBook(lookup);
+    setBusy(false);
+    if (!info) { toast('Could not find that one. Fill in the details by hand.'); setForm((f) => ({ ...f, title: f.title || (/^https?:/.test(lookup) ? '' : lookup) })); return; }
+    setForm((f) => ({ ...f, ...info, title: info.title, author: info.author || f.author }));
+  };
+
   const add = () => {
-    if (!form.title.trim()) {
-      toast('Add a title first');
-      return;
-    }
-    void db.books.add({ id: uid(), title: form.title.trim(), author: form.author.trim() || 'Unknown author', status: form.status, stars: form.stars, review: form.review.trim(), date: todayISO() });
+    if (!form.title.trim()) { toast('Add a title first'); return; }
+    const { title, author, status, stars, review, ...details } = form;
+    void db.books.add({ id: uid(), title: title.trim(), author: author.trim() || 'Unknown author', status, stars, review: review.trim(), date: todayISO(), ...clean(details) });
     setForm(empty);
-    setWriting(false);
+    setLookup('');
+    setAdding(false);
     toast('Added to your shelf');
+  };
+
+  // For books added before covers existed: look up by title and author, keep your review and rating.
+  const fillIn = async (b: Book) => {
+    setFinding(b.id);
+    const info = await lookupBook(`${b.title} ${b.author === 'Unknown author' ? '' : b.author}`.trim());
+    setFinding(null);
+    if (!info) { toast('No cover found. Tap Edit to paste one.'); return; }
+    await db.books.update(b.id, clean({ cover: info.cover, description: info.description, tldr: info.tldr, price: info.price, currency: info.currency, store: info.store, buyUrl: info.buyUrl, isbn: info.isbn }));
+    toast('Cover and details added');
   };
 
   return (
@@ -223,53 +253,81 @@ export function Bookshelf({ focus }: { focus?: string }) {
         </div>
       </section>
 
-      <Sheet title="Write a mini review" open={writing} onClose={() => setWriting(false)}>
-        <form className="stack-s" style={{ gap: 12 }} onSubmit={(e) => { e.preventDefault(); add(); }}>
-          <label htmlFor="btitle" className="lbl">Book</label>
+      <Sheet title="Add a book" open={adding} onClose={() => setAdding(false)}>
+        <form className="stack-s" style={{ gap: 12 }} noValidate onSubmit={(e) => { e.preventDefault(); add(); }}>
+          <label htmlFor="blookup" className="lbl">Paste a link or type a title</label>
+          <div className="inline-add">
+            <input id="blookup" type="text" inputMode="url" autoCapitalize="off" className="field" value={lookup} onChange={(e) => setLookup(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void find(); } }}
+              placeholder="Bookshop, Amazon, Goodreads link, or a title" />
+            <button type="button" className="btn2" onClick={() => void find()} disabled={busy}>{busy ? 'Looking' : 'Look it up'}</button>
+          </div>
+          {(form.cover || form.tldr || form.price) && (
+            <div className="book-found">
+              {form.cover && <img src={form.cover} alt="" />}
+              <div className="stack-s" style={{ gap: 4, minWidth: 0 }}>
+                <strong className="book-title">{form.title}</strong>
+                {form.author && <span className="sub">{form.author}</span>}
+                {form.price ? <span className="sub">{price(form.price, form.currency)}{form.store ? ` at ${form.store}` : ''}</span> : null}
+                {form.tldr && <span className="body" style={{ fontSize: 13 }}>{form.tldr}</span>}
+              </div>
+            </div>
+          )}
+          <label htmlFor="btitle" className="lbl">Title</label>
           <input id="btitle" type="text" className="field" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Title" />
           <label htmlFor="bauthor" className="lbl">Author</label>
           <input id="bauthor" type="text" className="field" value={form.author} onChange={(e) => setForm({ ...form, author: e.target.value })} placeholder="Author" />
           <label htmlFor="bstatus" className="lbl">Shelf</label>
           <select id="bstatus" className="field" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as Shelf })}>
-            <option value="Read">Read</option>
-            <option value="Reading">Currently reading</option>
             <option value="Want to read">Want to read</option>
+            <option value="Reading">Currently reading</option>
+            <option value="Read">Read</option>
           </select>
           <span className="lbl">Rating</span>
           <Stars label="Rating" value={form.stars} onPick={(n) => setForm({ ...form, stars: n })} />
-          <label htmlFor="breview" className="lbl">Review</label>
-          <textarea id="breview" rows={4} className="area" value={form.review} onChange={(e) => setForm({ ...form, review: e.target.value })} placeholder="A few lines: what stuck with you, who should read it" />
+          <label htmlFor="breview" className="lbl">My review (optional)</label>
+          <textarea id="breview" rows={3} className="area" value={form.review} onChange={(e) => setForm({ ...form, review: e.target.value })} placeholder="A few lines: what stuck with you, who should read it" />
           <button type="submit" className="btn">Add to shelf</button>
         </form>
       </Sheet>
-      <div className="split">
 
-        <section aria-labelledby="shelf-h" className="stack" style={{ gap: 14, flex: 1, minWidth: 0 }}>
-          <div className="trend-head">
-            <h2 className="h2" id="shelf-h">Bookshelf</h2>
-            <button type="button" className="btn" onClick={() => setWriting(true)}>+ Write a mini review</button>
-            <Chips label="Filter by shelf" value={filter} onChange={setFilter} options={[{ value: 'All', label: 'All' }, { value: 'Read', label: 'Read' }, { value: 'Reading', label: 'Reading' }, { value: 'Want to read', label: 'Want to read' }]} />
-          </div>
-          {shown.length === 0 && <p className="empty">No books on this shelf yet.</p>}
-          <div className="book-grid">
-            {shown.map((b) => (
-              <article className="card book" key={b.id} id={`item-${b.id}`}>
-                <div className="cover-tile" style={{ background: coverColor(b.id) }} aria-hidden="true"><span>{b.title}</span></div>
-                <div className="stack-s" style={{ flex: 1, minWidth: 0, gap: 6 }}>
-                  <strong className="book-title">{b.title}</strong>
-                  <span className="sub">{b.author}</span>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
-                    {b.stars > 0 && <StarText value={b.stars} />}
-                    <span className="tag t-plain">{SHELF_LABEL[b.status]}</span>
-                  </div>
-                  {b.review && <p className="review">{b.review}</p>}
-                  <div style={{ margin: '0 -8px -10px' }}><EditButton label={`Edit ${b.title}`} onClick={() => setEditing(b)} /></div>
+      <section aria-labelledby="shelf-h" className="stack" style={{ gap: 14 }}>
+        <div className="trend-head">
+          <h2 className="h2" id="shelf-h">Bookshelf</h2>
+          <button type="button" className="btn" onClick={() => { setForm(empty); setLookup(''); setAdding(true); }}>+ Add a book</button>
+        </div>
+        <Chips label="Filter by shelf" value={filter} onChange={setFilter} options={[{ value: 'All', label: `All (${books.length})` }, { value: 'Read', label: 'Read' }, { value: 'Reading', label: 'Reading' }, { value: 'Want to read', label: 'Want to read' }]} />
+        {shown.length === 0 && <p className="empty">No books on this shelf yet.</p>}
+        <div className="book-grid">
+          {shown.map((b) => (
+            <article className="card book" key={b.id} id={`item-${b.id}`}>
+              {b.cover
+                ? <img className="cover-img" src={b.cover} alt={`Cover of ${b.title}`} loading="lazy" />
+                : <div className="cover-tile" style={{ background: coverColor(b.id) }} aria-hidden="true"><span>{b.title}</span></div>}
+              <div className="stack-s" style={{ flex: 1, minWidth: 0, gap: 6 }}>
+                <strong className="book-title">{b.title}</strong>
+                <span className="sub">{b.author}</span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+                  {b.stars > 0 && <StarText value={b.stars} />}
+                  <span className="tag t-plain">{SHELF_LABEL[b.status]}</span>
                 </div>
-              </article>
-            ))}
-          </div>
-        </section>
-      </div>
+                {b.review && <p className="review">{b.review}</p>}
+                {b.tldr && <p className="body" style={{ fontSize: 13 }}><strong>In short:</strong> {b.tldr}</p>}
+                {b.description && b.description !== b.tldr && (
+                  <details className="book-more"><summary>About the book</summary><p className="body" style={{ fontSize: 13 }}>{b.description}</p></details>
+                )}
+                <div className="card-actions" style={{ marginBottom: -10 }}>
+                  {b.buyUrl
+                    ? <a className="btn-text" href={b.buyUrl} target="_blank" rel="noopener noreferrer">{b.price ? `${price(b.price, b.currency)} at ${b.store ?? 'the store'}` : `Buy at ${b.store ?? 'the store'}`}</a>
+                    : <a className="btn-text" href={bookshopSearch(b.title, b.author)} target="_blank" rel="noopener noreferrer">Find it on Bookshop.org</a>}
+                  {!b.cover && <button type="button" className="btn-text" onClick={() => void fillIn(b)} disabled={finding === b.id}>{finding === b.id ? 'Looking' : 'Find cover'}</button>}
+                  <EditButton label={`Edit ${b.title}`} onClick={() => setEditing(b)} />
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
       <TableEditor<Book>
         title="Edit book"
         open={!!editing}
@@ -282,3 +340,9 @@ export function Bookshelf({ focus }: { focus?: string }) {
     </div>
   );
 }
+
+function clean<T extends object>(o: T): Partial<T> {
+  return Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined && v !== '' && v !== 0)) as Partial<T>;
+}
+
+const price = (n: number, currency = 'USD') => (currency && currency !== 'USD' ? `${n.toFixed(2)} ${currency}` : `$${n.toFixed(2)}`);

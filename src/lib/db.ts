@@ -154,7 +154,7 @@ export async function applySeedPatches() {
     const table = db.table(p.table);
     const current = (await table.get(p.row)) as Record<string, unknown> | undefined;
     if (p.add && !current) await table.add({ ...p.add, id: p.row });
-    else if (p.set && current && Object.entries(p.from ?? {}).every(([k, v]) => current[k] === v)) await table.update(p.row, p.set);
+    else if (p.set && current && Object.entries(p.from ?? {}).every(([k, v]) => (v === null ? current[k] == null : current[k] === v))) await table.update(p.row, p.set);
     applied.add(p.id);
   }
   await db.meta.put({ key: 'appliedPatches', value: [...applied] });

@@ -27,6 +27,14 @@ export interface Book {
   stars: number;
   review: string;
   date: string; // ISO date added or finished
+  cover?: string; // cover art, stored as a resized copy when possible
+  description?: string; // the publisher's description
+  tldr?: string; // a short version: the description's first sentence or two
+  price?: number;
+  currency?: string;
+  store?: string; // where to buy it
+  buyUrl?: string;
+  isbn?: string;
 }
 
 export type ClassType = 'Pilates' | 'Hot Pilates' | 'Yoga' | 'Hot Yoga' | 'Barre' | 'Spin' | 'HIIT' | 'Boxing' | 'Gym' | 'Run';
@@ -39,6 +47,8 @@ export interface Studio {
   pastVisits: number; // visits before you started logging in the app
   price: number; // usual price per class
   logo?: string;
+  website?: string; // the logo is found from here
+  logoTried?: boolean;
 }
 export interface FitnessClass {
   id: string;

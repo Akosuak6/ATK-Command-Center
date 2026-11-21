@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { db, setMeta, uid, useMeta, useTable } from '../lib/db';
 import { addDays, clock12, daysBetween, duration, money, parseISO, weekday, pct, sameMonth, shortDate, todayISO, weekdayShort } from '../lib/format';
 import { recovery, todaysCall } from '../lib/calc';
 import type { ClassType, Facial, FitnessClass, Studio, Habit, HealthDay, SkincareStep, Supplement, WishItem } from '../lib/types';
 import { Bar, Checkbox, Chips, EditButton, Sheet, Stars, useToast } from '../components/ui';
 import { ImagePicker } from '../components/ImagePicker';
+import { logoFromWebsite } from '../lib/preview';
 import { TableEditor, type FieldDef } from '../components/ListEditor';
 import { useFocusItem } from '../components/Search';
 
@@ -86,6 +87,7 @@ const classFields: FieldDef<FitnessClass>[] = [
 const studioFields: FieldDef<Studio>[] = [
   { key: 'logo', label: 'Logo', type: 'image' },
   { key: 'name', label: 'Studio', wide: true },
+  { key: 'website', label: 'Website (the logo is found from here)', wide: true, placeholder: 'solidcore.co' },
   { key: 'type', label: 'Usual class', type: 'select', options: CLASS_TYPES.map((t) => ({ value: t, label: t })) },
   { key: 'price', label: 'Usual price', type: 'number' },
   { key: 'pastVisits', label: 'Visits before the app', type: 'number' },
@@ -109,6 +111,25 @@ export function HealthClasses({ focus }: { focus?: string }) {
   const [editStudios, setEditStudios] = useState(false);
   useFocusItem(focus, classes.length > 0);
 
+  // Find logos for studios that have a website but no logo yet, once each.
+  const [findingLogos, setFindingLogos] = useState(false);
+  const findLogos = async (all = false) => {
+    const todo = studios.filter((x) => x.website && !x.logo && (all || !x.logoTried));
+    if (!todo.length || !navigator.onLine) return 0;
+    setFindingLogos(true);
+    let found = 0;
+    for (const st of todo) {
+      const logo = await logoFromWebsite(st.website!);
+      await db.studios.update(st.id, logo ? { logo, logoTried: true } : { logoTried: true });
+      if (logo) found += 1;
+    }
+    setFindingLogos(false);
+    return found;
+  };
+  useEffect(() => {
+    if (studios.some((x) => x.website && !x.logo && !x.logoTried)) void findLogos();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [studios.length]);
   const studioOf = (name: string) => studios.find((x) => norm(x.name) === norm(name));
   const logged = (name: string) => classes.filter((c) => norm(c.studio) === norm(name)).length;
   const visits = (name: string) => (studioOf(name)?.pastVisits ?? 0) + logged(name);
@@ -192,7 +213,14 @@ export function HealthClasses({ focus }: { focus?: string }) {
       <section aria-labelledby="studios-h" className="stack-s" style={{ gap: 10 }}>
         <div className="row" style={{ alignItems: 'center' }}>
           <h2 className="h2" id="studios-h">Your studios</h2>
-          <EditButton label="Edit studios" onClick={() => setEditStudios(true)} />
+          <span className="card-actions" style={{ margin: 0 }}>
+            {studios.some((x) => x.website && !x.logo) && (
+              <button type="button" className="btn-text" disabled={findingLogos} onClick={async () => { const n = await findLogos(true); toast(n ? `Found ${n} ${n === 1 ? 'logo' : 'logos'}` : 'No new logos found. Paste one with Edit.'); }}>
+                {findingLogos ? 'Finding logos' : 'Find logos'}
+              </button>
+            )}
+            <EditButton label="Edit studios" onClick={() => setEditStudios(true)} />
+          </span>
         </div>
         <div className="studio-row" role="group" aria-label="Filter by studio">
           {studioRows.map((st) => {

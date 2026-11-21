@@ -56,6 +56,21 @@ function widthOf(src: string) {
   });
 }
 
+// A studio's logo from its website: the api/logo function when deployed, else the site's favicon.
+export async function logoFromWebsite(site: string): Promise<string | undefined> {
+  const url = /^https?:/i.test(site) ? site : `https://${site}`;
+  try {
+    const res = await get(`/api/logo?url=${encodeURIComponent(url)}`, 15000);
+    if (res.ok && (res.headers.get('content-type') ?? '').startsWith('image/')) return await resizeBlob(await res.blob(), 256);
+  } catch { /* fall through */ }
+  try {
+    const host = new URL(url).hostname;
+    return await imageFromUrl(`https://www.google.com/s2/favicons?domain=${host}&sz=256`, 256, 64);
+  } catch {
+    return undefined;
+  }
+}
+
 // Title, site name and cover for a link, in one go.
 export async function previewWithCover(url: string) {
   const kind = linkKind(url);
