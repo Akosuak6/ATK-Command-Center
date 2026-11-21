@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { db, setMeta, uid, useMeta, useTable } from '../lib/db';
 import { addDays, clock12, duration, money, parseISO, pct, sameMonth, shortDate, todayISO, weekdayShort } from '../lib/format';
 import { recovery, todaysCall } from '../lib/calc';
-import type { ClassType, FitnessClass, Habit, HealthDay, SkincareStep, Supplement, WishItem } from '../lib/types';
+import type { ClassType, FitnessClass, Studio, Habit, HealthDay, SkincareStep, Supplement, WishItem } from '../lib/types';
 import { Bar, Checkbox, Chips, EditButton, Sheet, Stars, useToast } from '../components/ui';
 import { ImagePicker } from '../components/ImagePicker';
 import { TableEditor, type FieldDef } from '../components/ListEditor';
@@ -71,7 +71,7 @@ export function HealthToday() {
   );
 }
 
-const CLASS_TYPES: ClassType[] = ['Pilates', 'HIIT', 'Gym', 'Yoga', 'Spin', 'Run'];
+export const CLASS_TYPES: ClassType[] = ['Pilates', 'Hot Pilates', 'Yoga', 'Hot Yoga', 'Barre', 'Spin', 'HIIT', 'Boxing', 'Gym', 'Run'];
 const classFields: FieldDef<FitnessClass>[] = [
   { key: 'date', label: 'Date', type: 'date' },
   { key: 'type', label: 'Type', type: 'select', options: CLASS_TYPES.map((t) => ({ value: t, label: t })) },
@@ -81,20 +81,42 @@ const classFields: FieldDef<FitnessClass>[] = [
   { key: 'price', label: 'Price', type: 'number' },
   { key: 'rating', label: 'Stars (0 to 5)', type: 'number' },
   { key: 'notes', label: 'Thoughts', type: 'textarea' },
-  { key: 'photo', label: 'Photo or studio logo', type: 'image' }
+  { key: 'photo', label: 'Photo from this class (the studio logo shows if empty)', type: 'image' }
 ];
+const studioFields: FieldDef<Studio>[] = [
+  { key: 'logo', label: 'Logo', type: 'image' },
+  { key: 'name', label: 'Studio', wide: true },
+  { key: 'type', label: 'Usual class', type: 'select', options: CLASS_TYPES.map((t) => ({ value: t, label: t })) },
+  { key: 'price', label: 'Usual price', type: 'number' },
+  { key: 'pastVisits', label: 'Visits before the app', type: 'number' },
+  { key: 'order', label: 'Order', type: 'number' }
+];
+
+const norm = (s: string) => s.trim().toLowerCase();
 
 export function HealthClasses({ focus }: { focus?: string }) {
   const classes = useTable(db.classes);
+  const studios = useTable(db.studios, 'order');
   const budget = useMeta<number>('fitnessBudget', 250);
   const toast = useToast();
   const empty = { type: 'Pilates' as ClassType, name: '', studio: '', instructor: '', price: '', notes: '', rating: 0, date: todayISO(), photo: undefined as string | null | undefined };
   const [form, setForm] = useState(empty);
   const [logging, setLogging] = useState(false);
   const [filter, setFilter] = useState<'All' | ClassType>('All');
+  const [studioFilter, setStudioFilter] = useState('');
   const [sort, setSort] = useState<'newest' | 'rating' | 'price'>('newest');
   const [editing, setEditing] = useState<FitnessClass | null>(null);
+  const [editStudios, setEditStudios] = useState(false);
   useFocusItem(focus, classes.length > 0);
+
+  const studioOf = (name: string) => studios.find((x) => norm(x.name) === norm(name));
+  const logged = (name: string) => classes.filter((c) => norm(c.studio) === norm(name)).length;
+  const visits = (name: string) => (studioOf(name)?.pastVisits ?? 0) + logged(name);
+  // Studios you have been to, most visits first, then any studio only seen in the log.
+  const studioRows = [
+    ...studios,
+    ...[...new Set(classes.map((c) => c.studio).filter((n) => n && !studioOf(n)))].map((name, i) => ({ id: `log-${i}`, order: 999, name, type: 'Pilates' as ClassType, pastVisits: 0, price: 0 } as Studio))
+  ].sort((x, y) => visits(y.name) - visits(x.name) || x.order - y.order);
 
   const month = classes.filter((c) => sameMonth(c.date));
   const spend = month.reduce((a, c) => a + (Number(c.price) || 0), 0);
@@ -103,28 +125,59 @@ export function HealthClasses({ focus }: { focus?: string }) {
   month.forEach((c) => { counts[c.type] = (counts[c.type] ?? 0) + 1; });
   const best = paid.slice().sort((a, b) => b.rating / b.price - a.rating / a.price)[0];
   const over = spend > budget;
+  const usedTypes = CLASS_TYPES.filter((t) => classes.some((c) => c.type === t));
 
-  const shown = classes.filter((c) => filter === 'All' || c.type === filter).sort((a, b) =>
-    sort === 'rating' ? b.rating - a.rating || b.date.localeCompare(a.date)
-      : sort === 'price' ? b.price - a.price || b.date.localeCompare(a.date)
-      : b.date.localeCompare(a.date));
+  const shown = classes
+    .filter((c) => (filter === 'All' || c.type === filter) && (!studioFilter || norm(c.studio) === norm(studioFilter)))
+    .sort((a, b) =>
+      sort === 'rating' ? b.rating - a.rating || b.date.localeCompare(a.date)
+        : sort === 'price' ? b.price - a.price || b.date.localeCompare(a.date)
+        : b.date.localeCompare(a.date));
 
-  // Reuse the photo or logo from the last class at the same studio.
-  const studioPhoto = (studio: string) => classes.filter((c) => c.photo && studio && c.studio.toLowerCase() === studio.toLowerCase()).sort((a, b) => b.date.localeCompare(a.date))[0]?.photo;
+  // Which visit number each logged class was at its studio (oldest first).
+  const visitNumber = new Map<string, number>();
+  const byStudio = new Map<string, FitnessClass[]>();
+  classes.forEach((c) => { if (c.studio) byStudio.set(norm(c.studio), [...(byStudio.get(norm(c.studio)) ?? []), c]); });
+  byStudio.forEach((list, key) => {
+    const base = studios.find((x) => norm(x.name) === key)?.pastVisits ?? 0;
+    list.sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id)).forEach((c, i) => visitNumber.set(c.id, base + i + 1));
+  });
 
-  const add = () => {
-    if (!form.name.trim() && !form.notes.trim()) {
-      toast('Add a class name or a few notes first');
+  const logoFor = (studio: string) => studioOf(studio)?.logo;
+
+  const pickStudio = (name: string) => {
+    const st = studioOf(name);
+    setForm((f) => ({
+      ...f,
+      studio: name,
+      photo: f.photo === null ? undefined : f.photo,
+      ...(st ? { type: st.type, price: f.price || (st.price ? String(st.price) : '') } : {})
+    }));
+  };
+
+  const add = async () => {
+    if (!form.name.trim() && !form.notes.trim() && !form.studio.trim()) {
+      toast('Add a studio, a class name or a few notes first');
       return;
     }
-    void db.classes.add({
-      id: uid(), date: form.date || todayISO(), type: form.type, name: form.name.trim() || `${form.type} class`, studio: form.studio.trim(),
+    const studio = form.studio.trim();
+    const st = studio ? studioOf(studio) : undefined;
+    // The first photo for a studio becomes its logo; later photos stay on that class only.
+    const photo = form.photo ?? undefined;
+    const becomesLogo = Boolean(photo && studio && (!st || !st.logo));
+    if (studio && !st) {
+      await db.studios.add({ id: uid(), order: studios.length + 1, name: studio, type: form.type, pastVisits: 0, price: Number(form.price) || 0, logo: becomesLogo ? photo : undefined });
+    } else if (st && becomesLogo) {
+      await db.studios.update(st.id, { logo: photo });
+    }
+    await db.classes.add({
+      id: uid(), date: form.date || todayISO(), type: form.type, name: form.name.trim() || `${form.type} class`, studio,
       instructor: form.instructor.trim(), price: Number(form.price) || 0, rating: form.rating || 3, notes: form.notes.trim(),
-      photo: form.photo === undefined ? studioPhoto(form.studio.trim()) : form.photo ?? undefined
+      photo: photo && !becomesLogo && photo !== st?.logo ? photo : undefined
     });
     setForm({ ...empty, type: form.type });
     setLogging(false);
-    toast('Class saved');
+    toast(studio ? `Class saved, visit ${visits(studio) + 1} at ${studio}` : 'Class saved');
   };
 
   return (
@@ -136,36 +189,68 @@ export function HealthClasses({ focus }: { focus?: string }) {
         <div className="stat"><span className="lbl">Best value</span><span className="num" style={{ fontSize: 22 }}>{best ? best.name : 'None yet'}</span><span className="sub">Highest rating per dollar</span></div>
       </section>
 
+      <section aria-labelledby="studios-h" className="stack-s" style={{ gap: 10 }}>
+        <div className="row" style={{ alignItems: 'center' }}>
+          <h2 className="h2" id="studios-h">Your studios</h2>
+          <EditButton label="Edit studios" onClick={() => setEditStudios(true)} />
+        </div>
+        <div className="studio-row" role="group" aria-label="Filter by studio">
+          {studioRows.map((st) => {
+            const n = visits(st.name);
+            const on = norm(studioFilter) === norm(st.name);
+            return (
+              <button key={st.id} type="button" className="studio-chip" aria-pressed={on} onClick={() => setStudioFilter(on ? '' : st.name)}>
+                <span className="studio-logo">{st.logo ? <img src={st.logo} alt="" /> : <span aria-hidden="true">{st.name.replace(/[^\p{L}\p{N}]/gu, '').slice(0, 2).toUpperCase()}</span>}</span>
+                <span className="studio-name">{st.name}</span>
+                <span className="sub">{n} {n === 1 ? 'visit' : 'visits'}</span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
       <section aria-labelledby="past-h" className="stack" style={{ gap: 14 }}>
         <div className="row row-wrap" style={{ alignItems: 'center' }}>
-          <h2 className="h2" id="past-h">Past classes</h2>
-          <button type="button" className="btn" onClick={() => setLogging(true)}>+ Log a class</button>
+          <h2 className="h2" id="past-h">{studioFilter ? `Classes at ${studioFilter}` : 'Past classes'}</h2>
+          <button type="button" className="btn" onClick={() => { setForm((f) => ({ ...f, ...(studioFilter ? { studio: studioFilter } : {}) })); if (studioFilter) pickStudio(studioFilter); setLogging(true); }}>+ Log a class</button>
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: 10 }}>
-          <Chips label="Filter by type" value={filter} onChange={setFilter} options={[{ value: 'All', label: 'All' }, ...CLASS_TYPES.map((t) => ({ value: t, label: t }))]} />
+          <Chips label="Filter by type" value={filter} onChange={setFilter} options={[{ value: 'All', label: 'All' }, ...usedTypes.map((t) => ({ value: t, label: t }))]} />
           <Chips label="Sort" value={sort} onChange={setSort} options={[{ value: 'newest', label: 'Newest' }, { value: 'rating', label: 'Top rated' }, { value: 'price', label: 'Price' }]} />
         </div>
-        {shown.length === 0 && <span className="sub">No classes of this type yet.</span>}
+        {shown.length === 0 && <span className="sub">{studioFilter ? `No classes logged at ${studioFilter} yet.` : 'No classes of this type yet.'}</span>}
         <div className="photo-grid">
-          {shown.map((c) => (
-            <button type="button" className="photo-card" key={c.id} id={`item-${c.id}`} onClick={() => setEditing(c)} aria-label={`${c.name}, ${shortDate(c.date)}. Tap to edit`}>
-              <span className="photo-media">
-                {c.photo ? <img src={c.photo} alt="" loading="lazy" /> : <PhotoPlaceholder word={c.type} seed={c.id} />}
-                <span className="photo-pill top">{c.type}</span>
-                {c.rating > 0 && <span className="photo-pill bottom"><span aria-hidden="true">★</span> {c.rating}</span>}
-              </span>
-              <span className="photo-cap">
-                <strong>{c.name}</strong>
-                <span className="sub">{[c.studio, c.instructor ? `with ${c.instructor}` : '', c.price ? money(c.price) : 'Free', shortDate(c.date)].filter(Boolean).join(' · ')}</span>
-                {c.notes && <span className="photo-notes">{c.notes}</span>}
-              </span>
-            </button>
-          ))}
+          {shown.map((c) => {
+            const img = c.photo || logoFor(c.studio);
+            const vn = visitNumber.get(c.id);
+            const total = c.studio ? visits(c.studio) : 0;
+            return (
+              <button type="button" className="photo-card" key={c.id} id={`item-${c.id}`} onClick={() => setEditing(c)}
+                aria-label={`${c.name}, ${shortDate(c.date)}${vn ? `, visit ${vn} of ${total} at ${c.studio}` : ''}. Tap to edit`}>
+                <span className="photo-media">
+                  {img ? <img src={img} alt="" loading="lazy" /> : <PhotoPlaceholder word={c.type} seed={c.id} />}
+                  {total > 0 && <span className="tally" title={`${total} visits to ${c.studio}`} aria-hidden="true">{total}</span>}
+                  <span className={`photo-pill top${total > 0 ? ' after-tally' : ''}`}>{c.type}</span>
+                  {c.rating > 0 && <span className="photo-pill bottom"><span aria-hidden="true">★</span> {c.rating}</span>}
+                </span>
+                <span className="photo-cap">
+                  <strong>{c.name}</strong>
+                  <span className="sub">{[c.studio, c.instructor ? `with ${c.instructor}` : '', c.price ? money(c.price) : 'Free', shortDate(c.date)].filter(Boolean).join(' · ')}</span>
+                  {vn && <span className="sub">Visit {vn} at {c.studio}</span>}
+                  {c.notes && <span className="photo-notes">{c.notes}</span>}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </section>
 
       <Sheet title="Log a class" open={logging} onClose={() => setLogging(false)}>
-        <form className="stack-s" style={{ gap: 12 }} onSubmit={(e) => { e.preventDefault(); add(); }}>
+        <form className="stack-s" style={{ gap: 12 }} onSubmit={(e) => { e.preventDefault(); void add(); }}>
+          <label htmlFor="cstudio" className="lbl">Studio</label>
+          <input id="cstudio" type="text" className="field" list="studios" autoComplete="off" value={form.studio} onChange={(e) => pickStudio(e.target.value)} placeholder="Start typing, e.g. Studio Pilates" />
+          <datalist id="studios">{studioRows.map((st) => <option key={st.id} value={st.name} />)}</datalist>
+          {form.studio.trim() && <span className="sub">{studioOf(form.studio) ? `This will be visit ${visits(form.studio) + 1}.` : 'New studio, it will be added to your studios.'}</span>}
           <div className="form-2">
             <div className="form-col"><label htmlFor="ctype" className="lbl">Type</label>
               <select id="ctype" className="field" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as ClassType })}>
@@ -179,23 +264,27 @@ export function HealthClasses({ focus }: { focus?: string }) {
           <label htmlFor="cname" className="lbl">Class</label>
           <input id="cname" type="text" className="field" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Reformer Flow" />
           <div className="form-2">
-            <div className="form-col"><label htmlFor="cstudio" className="lbl">Studio</label><input id="cstudio" type="text" className="field" list="studios" value={form.studio} onChange={(e) => setForm({ ...form, studio: e.target.value, photo: form.photo === null ? undefined : form.photo })} placeholder="Studio" /></div>
             <div className="form-col"><label htmlFor="cinst" className="lbl">Instructor</label><input id="cinst" type="text" className="field" value={form.instructor} onChange={(e) => setForm({ ...form, instructor: e.target.value })} placeholder="Instructor" /></div>
+            <div className="form-col"><label htmlFor="cdate" className="lbl">Date</label><input id="cdate" type="date" className="field" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></div>
           </div>
-          <datalist id="studios">{[...new Set(classes.map((c) => c.studio).filter(Boolean))].map((s) => <option key={s} value={s} />)}</datalist>
-          <label htmlFor="cdate" className="lbl">Date</label>
-          <input id="cdate" type="date" className="field" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
           <span className="lbl">Rating</span>
           <Stars label="Rating" value={form.rating} onPick={(n) => setForm({ ...form, rating: n })} />
           <label htmlFor="cnotes" className="lbl">Thoughts on the class</label>
           <textarea id="cnotes" rows={3} className="area" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="How did it feel? Book this instructor again?" />
-          <ImagePicker id="cphoto" label="Photo or studio logo (optional)" value={form.photo === undefined ? studioPhoto(form.studio) : form.photo ?? undefined} onChange={(src) => setForm({ ...form, photo: src ?? null })} />
+          <ImagePicker id="cphoto"
+            label={studioOf(form.studio)?.logo ? 'Photo (optional, the studio logo is used otherwise)' : 'Photo or studio logo (optional)'}
+            value={form.photo === undefined ? logoFor(form.studio) : form.photo ?? undefined}
+            onChange={(src) => setForm({ ...form, photo: src ?? null })} />
           <button type="submit" className="btn">Save class</button>
         </form>
       </Sheet>
       <TableEditor<FitnessClass>
         title="Edit class" open={!!editing} onClose={() => setEditing(null)} table={db.classes} rows={editing ? [editing] : []} fields={classFields}
         itemName={(c) => c.name}
+      />
+      <TableEditor<Studio>
+        title="Edit studios" open={editStudios} onClose={() => setEditStudios(false)} table={db.studios} rows={studios} fields={studioFields}
+        itemName={(x) => x.name} addLabel="Add a studio" make={() => ({ order: studios.length + 1, name: '', type: 'Pilates', pastVisits: 0, price: 0 })}
       />
     </div>
   );

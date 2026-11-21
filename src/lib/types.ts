@@ -28,7 +28,17 @@ export interface Book {
   date: string; // ISO date added or finished
 }
 
-export type ClassType = 'Pilates' | 'HIIT' | 'Gym' | 'Yoga' | 'Spin' | 'Run';
+export type ClassType = 'Pilates' | 'Hot Pilates' | 'Yoga' | 'Hot Yoga' | 'Barre' | 'Spin' | 'HIIT' | 'Boxing' | 'Gym' | 'Run';
+
+export interface Studio {
+  id: string;
+  order: number;
+  name: string;
+  type: ClassType; // usual class type, prefilled when you log a class there
+  pastVisits: number; // visits before you started logging in the app
+  price: number; // usual price per class
+  logo?: string;
+}
 export interface FitnessClass {
   id: string;
   date: string;

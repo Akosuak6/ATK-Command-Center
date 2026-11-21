@@ -1,9 +1,34 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import { existsSync, readFileSync } from 'node:fs';
+
+// Seed data = src/data/seed.json, with any table in private/seed-overlay.json replacing the sample.
+// private/ is never committed, so real data stays out of the public repo.
+function seedPlugin() {
+  const id = 'virtual:seed';
+  return {
+    name: 'command-center-seed',
+    resolveId: (source: string) => (source === id ? '\0' + id : null),
+    load(resolved: string) {
+      if (resolved !== '\0' + id) return null;
+      const base = JSON.parse(readFileSync('src/data/seed.json', 'utf8'));
+      const overlayPath = process.env.SEED_OVERLAY || 'private/seed-overlay.json';
+      if (existsSync(overlayPath)) {
+        const overlay = JSON.parse(readFileSync(overlayPath, 'utf8'));
+        for (const [k, v] of Object.entries(overlay)) {
+          if (k === 'meta') base.meta = { ...base.meta, ...(v as object) };
+          else if (!k.startsWith('_')) base[k] = v;
+        }
+      }
+      return `export default ${JSON.stringify(base)};`;
+    }
+  };
+}
 
 export default defineConfig({
   plugins: [
+    seedPlugin(),
     react(),
     VitePWA({
       registerType: 'autoUpdate',

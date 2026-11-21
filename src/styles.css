@@ -446,3 +446,14 @@ dialog.sheet[open] { display: flex; flex-direction: column; overflow: hidden; }
 .video-frame { position: relative; aspect-ratio: 16 / 9; background: #000; }
 .pin-cover.video-frame { width: 100%; }
 .video-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+
+/* Studios and visit tallies */
+.studio-row { display: flex; gap: 10px; overflow-x: auto; padding: 2px 2px 8px; scroll-snap-type: x proximity; scrollbar-width: none; }
+.studio-row::-webkit-scrollbar { display: none; }
+.studio-chip { flex: 0 0 auto; width: 104px; min-height: 44px; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 8px; border-radius: 14px; border: 1px solid var(--border); background: var(--card); color: var(--ink); cursor: pointer; scroll-snap-align: start; text-align: center; }
+.studio-chip[aria-pressed='true'] { border-color: var(--navy); box-shadow: inset 0 0 0 1px var(--navy); background: #ECE5DA; }
+.studio-logo { width: 52px; height: 52px; border-radius: 26px; overflow: hidden; background: var(--navy); color: var(--cream); display: flex; align-items: center; justify-content: center; font-family: var(--serif); font-size: 18px; border: 1px solid var(--chrome-edge); }
+.studio-logo img { width: 100%; height: 100%; object-fit: cover; background: #fff; }
+.studio-name { font-size: 12px; font-weight: 600; line-height: 1.2; }
+.tally { position: absolute; top: 8px; left: 8px; min-width: 30px; height: 30px; padding: 0 6px; border-radius: 15px; background: var(--navy); color: var(--cream); font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px rgba(243, 238, 230, 0.9); font-variant-numeric: tabular-nums; }
+.photo-pill.top.after-tally { left: 46px; top: 12px; }

@@ -1,9 +1,9 @@
 import Dexie, { type Table } from 'dexie';
 import { useLiveQuery } from 'dexie-react-hooks';
-import seed from '../data/seed.json';
+import seed from 'virtual:seed';
 import { addDays, todayISO } from './format';
 import type {
-  Account, Bill, Book, BudgetCategory, CalendarEvent, DumpItem, FitnessClass, Goal, Habit, HealthDay,
+  Account, Bill, Book, Studio, BudgetCategory, CalendarEvent, DumpItem, FitnessClass, Goal, Habit, HealthDay,
   Meta, Person, Pin, Priority, Restaurant, RoadmapItem, SavingsGoal, ShowEvent, SkincareStep, Supplement,
   Trim, Trip, WishItem
 } from './types';
@@ -32,6 +32,7 @@ export class CommandCenterDB extends Dexie {
   people!: Table<Person, string>;
   calendar!: Table<CalendarEvent, string>;
   health!: Table<HealthDay, string>;
+  studios!: Table<Studio, string>;
 
   constructor() {
     super('akosua-command-center');
@@ -59,6 +60,11 @@ export class CommandCenterDB extends Dexie {
       people: 'id, lastContact',
       calendar: 'id, date',
       health: 'date'
+    });
+    // Version 2 adds studios (with visit counts and logos). Existing phones get the seed studios once.
+    this.version(2).stores({ studios: 'id, order' }).upgrade(async (tx) => {
+      const rows = (seed as { studios?: Studio[] }).studios ?? [];
+      if (rows.length) await tx.table('studios').bulkPut(rows);
     });
     this.on('populate', (tx) => {
       const data = resolveTokens(seed, todayISO()) as Record<string, unknown>;

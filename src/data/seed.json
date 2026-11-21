@@ -5,12 +5,38 @@
     "readingGoal": 20,
     "fitnessBudget": 250,
     "city": "NYC",
-    "visionHeadline": ["2027 is for", "more yeses"],
+    "visionHeadline": [
+      "2027 is for",
+      "more yeses"
+    ],
     "intention": "Say yes to the dinner, the trip and the last minute plan.",
     "calendarSyncedAt": null,
     "watchSyncedAt": null,
-    "supplementLog": ["@day-1", "@day-2", "@day-3", "@day-4", "@day-5", "@day-6", "@day-7"],
-    "skincareLog": { "am": ["@day-1", "@day-2", "@day-4", "@day-5", "@day-6"], "pm": ["@day-1", "@day-2", "@day-3", "@day-5", "@day-6"] },
+    "supplementLog": [
+      "@day-1",
+      "@day-2",
+      "@day-3",
+      "@day-4",
+      "@day-5",
+      "@day-6",
+      "@day-7"
+    ],
+    "skincareLog": {
+      "am": [
+        "@day-1",
+        "@day-2",
+        "@day-4",
+        "@day-5",
+        "@day-6"
+      ],
+      "pm": [
+        "@day-1",
+        "@day-2",
+        "@day-3",
+        "@day-5",
+        "@day-6"
+      ]
+    },
     "moneySnapshot": {
       "asOf": "@day-4",
       "leftToSpend": 1240,
@@ -26,161 +52,1007 @@
     },
     "trends": {
       "home": [
-        { "area": "Life score", "p1": 3.8, "p1Label": "score change", "p1Up": true, "p1Good": true, "p2": 12.0, "p2Label": "habits completed", "p2Up": true, "p2Good": true, "foot": "82 of 100" },
-        { "area": "Goals", "p1": 9.5, "p1Label": "progress gained", "p1Up": true, "p1Good": true, "p2": 4.0, "p2Label": "steps late", "p2Up": true, "p2Good": false, "foot": "3 of 4 on track" },
-        { "area": "Balance", "p1": 6.1, "p1Label": "time for yourself", "p1Up": true, "p1Good": true, "p2": 8.3, "p2Label": "screen time", "p2Up": false, "p2Good": true, "foot": "2 free evenings" }
+        {
+          "area": "Life score",
+          "p1": 3.8,
+          "p1Label": "score change",
+          "p1Up": true,
+          "p1Good": true,
+          "p2": 12.0,
+          "p2Label": "habits completed",
+          "p2Up": true,
+          "p2Good": true,
+          "foot": "82 of 100"
+        },
+        {
+          "area": "Goals",
+          "p1": 9.5,
+          "p1Label": "progress gained",
+          "p1Up": true,
+          "p1Good": true,
+          "p2": 4.0,
+          "p2Label": "steps late",
+          "p2Up": true,
+          "p2Good": false,
+          "foot": "3 of 4 on track"
+        },
+        {
+          "area": "Balance",
+          "p1": 6.1,
+          "p1Label": "time for yourself",
+          "p1Up": true,
+          "p1Good": true,
+          "p2": 8.3,
+          "p2Label": "screen time",
+          "p2Up": false,
+          "p2Good": true,
+          "foot": "2 free evenings"
+        }
       ],
       "dump": [
-        { "area": "Learning", "p1": 60.0, "p1Label": "items dumped", "p1Up": true, "p1Good": true, "p2": 25.0, "p2Label": "thoughts added", "p2Up": true, "p2Good": true, "foot": "11 this month" },
-        { "area": "Reading", "p1": 50.0, "p1Label": "pages read", "p1Up": true, "p1Good": true, "p2": 1.0, "p2Label": "books finished", "p2Up": true, "p2Good": true, "foot": "2 books this month" },
-        { "area": "Watching", "p1": 20.0, "p1Label": "films and shows", "p1Up": true, "p1Good": true, "p2": 10.0, "p2Label": "unwatched list", "p2Up": false, "p2Good": true, "foot": "3 to watch" }
+        {
+          "area": "Learning",
+          "p1": 60.0,
+          "p1Label": "items dumped",
+          "p1Up": true,
+          "p1Good": true,
+          "p2": 25.0,
+          "p2Label": "thoughts added",
+          "p2Up": true,
+          "p2Good": true,
+          "foot": "11 this month"
+        },
+        {
+          "area": "Reading",
+          "p1": 50.0,
+          "p1Label": "pages read",
+          "p1Up": true,
+          "p1Good": true,
+          "p2": 1.0,
+          "p2Label": "books finished",
+          "p2Up": true,
+          "p2Good": true,
+          "foot": "2 books this month"
+        },
+        {
+          "area": "Watching",
+          "p1": 20.0,
+          "p1Label": "films and shows",
+          "p1Up": true,
+          "p1Good": true,
+          "p2": 10.0,
+          "p2Label": "unwatched list",
+          "p2Up": false,
+          "p2Good": true,
+          "foot": "3 to watch"
+        }
       ],
       "money": [
-        { "area": "Savings", "p1": 12.4, "p1Label": "saved vs prior period", "p1Up": true, "p1Good": true, "p2": 6.2, "p2Label": "total spending", "p2Up": false, "p2Good": true, "foot": "22% savings rate" },
-        { "area": "Net worth", "p1": 4.1, "p1Label": "net worth growth", "p1Up": true, "p1Good": true, "p2": 3.2, "p2Label": "investments", "p2Up": true, "p2Good": true, "foot": "$48,600" },
-        { "area": "Spending", "p1": 6.2, "p1Label": "total spending", "p1Up": false, "p1Good": true, "p2": 5.0, "p2Label": "dining out", "p2Up": true, "p2Good": false, "foot": "$3,860 of $5,100" }
+        {
+          "area": "Savings",
+          "p1": 12.4,
+          "p1Label": "saved vs prior period",
+          "p1Up": true,
+          "p1Good": true,
+          "p2": 6.2,
+          "p2Label": "total spending",
+          "p2Up": false,
+          "p2Good": true,
+          "foot": "22% savings rate"
+        },
+        {
+          "area": "Net worth",
+          "p1": 4.1,
+          "p1Label": "net worth growth",
+          "p1Up": true,
+          "p1Good": true,
+          "p2": 3.2,
+          "p2Label": "investments",
+          "p2Up": true,
+          "p2Good": true,
+          "foot": "$48,600"
+        },
+        {
+          "area": "Spending",
+          "p1": 6.2,
+          "p1Label": "total spending",
+          "p1Up": false,
+          "p1Good": true,
+          "p2": 5.0,
+          "p2Label": "dining out",
+          "p2Up": true,
+          "p2Good": false,
+          "foot": "$3,860 of $5,100"
+        }
       ],
       "health": [
-        { "area": "Sleep", "p1": 4.6, "p1Label": "avg duration", "p1Up": true, "p1Good": true, "p2": 2.1, "p2Label": "bedtime consistency", "p2Up": false, "p2Good": false, "foot": "7h 22m average" },
-        { "area": "Training", "p1": 25.0, "p1Label": "workouts", "p1Up": true, "p1Good": true, "p2": 8.0, "p2Label": "cost per class", "p2Up": false, "p2Good": true, "foot": "13 classes logged" },
-        { "area": "Recovery", "p1": 3.3, "p1Label": "HRV", "p1Up": false, "p1Good": false, "p2": 2.4, "p2Label": "resting heart rate", "p2Up": false, "p2Good": true, "foot": "HRV 57 ms" }
+        {
+          "area": "Sleep",
+          "p1": 4.6,
+          "p1Label": "avg duration",
+          "p1Up": true,
+          "p1Good": true,
+          "p2": 2.1,
+          "p2Label": "bedtime consistency",
+          "p2Up": false,
+          "p2Good": false,
+          "foot": "7h 22m average"
+        },
+        {
+          "area": "Training",
+          "p1": 25.0,
+          "p1Label": "workouts",
+          "p1Up": true,
+          "p1Good": true,
+          "p2": 8.0,
+          "p2Label": "cost per class",
+          "p2Up": false,
+          "p2Good": true,
+          "foot": "13 classes logged"
+        },
+        {
+          "area": "Recovery",
+          "p1": 3.3,
+          "p1Label": "HRV",
+          "p1Up": false,
+          "p1Good": false,
+          "p2": 2.4,
+          "p2Label": "resting heart rate",
+          "p2Up": false,
+          "p2Good": true,
+          "foot": "HRV 57 ms"
+        }
       ],
       "social": [
-        { "area": "Connection", "p1": 50.0, "p1Label": "friends seen", "p1Up": true, "p1Good": true, "p2": 20.0, "p2Label": "plans made", "p2Up": true, "p2Good": true, "foot": "6 plans this month" },
-        { "area": "Experiences", "p1": 33.3, "p1Label": "new restaurants", "p1Up": true, "p1Good": true, "p2": 15.0, "p2Label": "going out spend", "p2Up": true, "p2Good": false, "foot": "4 new spots" },
-        { "area": "Reach outs", "p1": 25.0, "p1Label": "gaps past 30 days", "p1Up": false, "p1Good": true, "p2": 10.0, "p2Label": "family calls", "p2Up": true, "p2Good": true, "foot": "3 people to text" }
+        {
+          "area": "Connection",
+          "p1": 50.0,
+          "p1Label": "friends seen",
+          "p1Up": true,
+          "p1Good": true,
+          "p2": 20.0,
+          "p2Label": "plans made",
+          "p2Up": true,
+          "p2Good": true,
+          "foot": "6 plans this month"
+        },
+        {
+          "area": "Experiences",
+          "p1": 33.3,
+          "p1Label": "new restaurants",
+          "p1Up": true,
+          "p1Good": true,
+          "p2": 15.0,
+          "p2Label": "going out spend",
+          "p2Up": true,
+          "p2Good": false,
+          "foot": "4 new spots"
+        },
+        {
+          "area": "Reach outs",
+          "p1": 25.0,
+          "p1Label": "gaps past 30 days",
+          "p1Up": false,
+          "p1Good": true,
+          "p2": 10.0,
+          "p2Label": "family calls",
+          "p2Up": true,
+          "p2Good": true,
+          "foot": "3 people to text"
+        }
       ]
     }
   },
   "dump": [
-    { "id": "d6", "type": "Substack", "title": "Why the best operators write everything down", "source": "substack.com", "url": "", "date": "@day-2", "note": "Start a weekly decision log in the new role.", "rating": 0, "comments": [] },
-    { "id": "d5", "type": "Film", "title": "A documentary on the people behind a big health tech scandal", "source": "Streaming", "url": "", "date": "@day-4", "note": "Pairs with Bad Blood.", "rating": 4, "comments": [] },
-    { "id": "d4", "type": "Article", "title": "What ambient AI scribes are changing about the doctor visit", "source": "Healthcare newsletter", "url": "", "date": "@day-6", "note": "Adoption depends on whether clinicians trust the summaries.", "rating": 0, "comments": [{ "text": "Ask a friend in primary care how her clinic is rolling this out.", "date": "@day-5" }] },
-    { "id": "d3", "type": "Think piece", "title": "The case for spending lavishly on one thing", "source": "Personal finance blog", "url": "", "date": "@day-9", "note": "Mine is travel. Cut everywhere else.", "rating": 0, "comments": [] },
-    { "id": "d2", "type": "TV show", "title": "A slow burn workplace drama everyone is talking about", "source": "Streaming", "url": "", "date": "@day-12", "note": "", "rating": 5, "comments": [] },
-    { "id": "d1", "type": "Perspective", "title": "A founder on building care for patients who are usually overlooked", "source": "Podcast notes", "url": "", "date": "@day-17", "note": "Reminded me why I care about access.", "rating": 0, "comments": [] }
+    {
+      "id": "d6",
+      "type": "Substack",
+      "title": "Why the best operators write everything down",
+      "source": "substack.com",
+      "url": "",
+      "date": "@day-2",
+      "note": "Start a weekly decision log in the new role.",
+      "rating": 0,
+      "comments": []
+    },
+    {
+      "id": "d5",
+      "type": "Film",
+      "title": "A documentary on the people behind a big health tech scandal",
+      "source": "Streaming",
+      "url": "",
+      "date": "@day-4",
+      "note": "Pairs with Bad Blood.",
+      "rating": 4,
+      "comments": []
+    },
+    {
+      "id": "d4",
+      "type": "Article",
+      "title": "What ambient AI scribes are changing about the doctor visit",
+      "source": "Healthcare newsletter",
+      "url": "",
+      "date": "@day-6",
+      "note": "Adoption depends on whether clinicians trust the summaries.",
+      "rating": 0,
+      "comments": [
+        {
+          "text": "Ask a friend in primary care how her clinic is rolling this out.",
+          "date": "@day-5"
+        }
+      ]
+    },
+    {
+      "id": "d3",
+      "type": "Think piece",
+      "title": "The case for spending lavishly on one thing",
+      "source": "Personal finance blog",
+      "url": "",
+      "date": "@day-9",
+      "note": "Mine is travel. Cut everywhere else.",
+      "rating": 0,
+      "comments": []
+    },
+    {
+      "id": "d2",
+      "type": "TV show",
+      "title": "A slow burn workplace drama everyone is talking about",
+      "source": "Streaming",
+      "url": "",
+      "date": "@day-12",
+      "note": "",
+      "rating": 5,
+      "comments": []
+    },
+    {
+      "id": "d1",
+      "type": "Perspective",
+      "title": "A founder on building care for patients who are usually overlooked",
+      "source": "Podcast notes",
+      "url": "",
+      "date": "@day-17",
+      "note": "Reminded me why I care about access.",
+      "rating": 0,
+      "comments": []
+    }
   ],
   "books": [
-    { "id": "b7", "title": "Bad Blood", "author": "John Carreyrou", "status": "Read", "stars": 5, "review": "Read it in two sittings. A lesson in what happens when nobody is allowed to ask hard questions.", "date": "@day-20" },
-    { "id": "b6", "title": "The Psychology of Money", "author": "Morgan Housel", "status": "Read", "stars": 4, "review": "Short chapters, big ideas. The bit about enough stuck with me most.", "date": "@day-60" },
-    { "id": "b5", "title": "Tomorrow, and Tomorrow, and Tomorrow", "author": "Gabrielle Zevin", "status": "Reading", "stars": 0, "review": "Halfway through and loving the friendship at the center of it.", "date": "@day-8" },
-    { "id": "b4", "title": "Atomic Habits", "author": "James Clear", "status": "Want to read", "stars": 0, "review": "Recommended by three friends this year.", "date": "@day-30" }
+    {
+      "id": "b7",
+      "title": "Bad Blood",
+      "author": "John Carreyrou",
+      "status": "Read",
+      "stars": 5,
+      "review": "Read it in two sittings. A lesson in what happens when nobody is allowed to ask hard questions.",
+      "date": "@day-20"
+    },
+    {
+      "id": "b6",
+      "title": "The Psychology of Money",
+      "author": "Morgan Housel",
+      "status": "Read",
+      "stars": 4,
+      "review": "Short chapters, big ideas. The bit about enough stuck with me most.",
+      "date": "@day-60"
+    },
+    {
+      "id": "b5",
+      "title": "Tomorrow, and Tomorrow, and Tomorrow",
+      "author": "Gabrielle Zevin",
+      "status": "Reading",
+      "stars": 0,
+      "review": "Halfway through and loving the friendship at the center of it.",
+      "date": "@day-8"
+    },
+    {
+      "id": "b4",
+      "title": "Atomic Habits",
+      "author": "James Clear",
+      "status": "Want to read",
+      "stars": 0,
+      "review": "Recommended by three friends this year.",
+      "date": "@day-30"
+    }
   ],
   "classes": [
-    { "id": "c5", "date": "@day-1", "type": "Pilates", "name": "Reformer Flow", "studio": "Chelsea studio", "instructor": "Maya", "price": 38, "rating": 5, "notes": "Best class this month. Great form cues and my core was shaking by the end. Book her again." },
-    { "id": "c4", "date": "@day-3", "type": "HIIT", "name": "Tread and Floor", "studio": "Flatiron", "instructor": "Jordan", "price": 34, "rating": 4, "notes": "Hard in a good way. Room was too crowded for the floor block." },
-    { "id": "c3", "date": "@day-5", "type": "Gym", "name": "Lower body strength", "studio": "Home gym", "instructor": "Self", "price": 0, "rating": 4, "notes": "New deadlift PR. Warm up hips longer next time." },
-    { "id": "c2", "date": "@day-8", "type": "Yoga", "name": "Hot vinyasa", "studio": "Williamsburg", "instructor": "Priya", "price": 30, "rating": 3, "notes": "Too hot after a long workday. Try the 7 AM slot." },
-    { "id": "c1", "date": "@day-10", "type": "Spin", "name": "Rhythm ride", "studio": "Soho", "instructor": "Andre", "price": 36, "rating": 5, "notes": "So fun. Bring a friend next time." }
+    {
+      "id": "c5",
+      "date": "@day-1",
+      "type": "Pilates",
+      "name": "Reformer Flow",
+      "studio": "Chelsea studio",
+      "instructor": "Maya",
+      "price": 38,
+      "rating": 5,
+      "notes": "Best class this month. Great form cues and my core was shaking by the end. Book her again."
+    },
+    {
+      "id": "c4",
+      "date": "@day-3",
+      "type": "HIIT",
+      "name": "Tread and Floor",
+      "studio": "Flatiron",
+      "instructor": "Jordan",
+      "price": 34,
+      "rating": 4,
+      "notes": "Hard in a good way. Room was too crowded for the floor block."
+    },
+    {
+      "id": "c3",
+      "date": "@day-5",
+      "type": "Gym",
+      "name": "Lower body strength",
+      "studio": "Home gym",
+      "instructor": "Self",
+      "price": 0,
+      "rating": 4,
+      "notes": "New deadlift PR. Warm up hips longer next time."
+    },
+    {
+      "id": "c2",
+      "date": "@day-8",
+      "type": "Hot Yoga",
+      "name": "Hot vinyasa",
+      "studio": "Williamsburg",
+      "instructor": "Priya",
+      "price": 30,
+      "rating": 3,
+      "notes": "Too hot after a long workday. Try the 7 AM slot."
+    },
+    {
+      "id": "c1",
+      "date": "@day-10",
+      "type": "Spin",
+      "name": "Rhythm ride",
+      "studio": "Soho",
+      "instructor": "Andre",
+      "price": 36,
+      "rating": 5,
+      "notes": "So fun. Bring a friend next time."
+    }
   ],
   "priorities": [
-    { "id": "p1", "text": "Move $288 to the Lisbon fund", "done": false, "date": "@day+0" },
-    { "id": "p2", "text": "Text a former mentor", "done": true, "date": "@day+0" }
+    {
+      "id": "p1",
+      "text": "Move $288 to the Lisbon fund",
+      "done": false,
+      "date": "@day+0"
+    },
+    {
+      "id": "p2",
+      "text": "Text a former mentor",
+      "done": true,
+      "date": "@day+0"
+    }
   ],
   "pins": [],
   "restaurants": [
-    { "id": "r1", "name": "Omakase counter", "cuisine": "Japanese", "hood": "East Village", "list": "Want to try" },
-    { "id": "r2", "name": "West African spot", "cuisine": "West African", "hood": "Harlem", "list": "Want to try" },
-    { "id": "r3", "name": "Natural wine bar", "cuisine": "Wine bar", "hood": "Fort Greene", "list": "Want to try" },
-    { "id": "r4", "name": "Handmade pasta place", "cuisine": "Italian", "hood": "West Village", "list": "Been, loved it" },
-    { "id": "r5", "name": "Weekend brunch spot", "cuisine": "Brunch", "hood": "Williamsburg", "list": "Been, loved it" }
+    {
+      "id": "r1",
+      "name": "Omakase counter",
+      "cuisine": "Japanese",
+      "hood": "East Village",
+      "list": "Want to try"
+    },
+    {
+      "id": "r2",
+      "name": "West African spot",
+      "cuisine": "West African",
+      "hood": "Harlem",
+      "list": "Want to try"
+    },
+    {
+      "id": "r3",
+      "name": "Natural wine bar",
+      "cuisine": "Wine bar",
+      "hood": "Fort Greene",
+      "list": "Want to try"
+    },
+    {
+      "id": "r4",
+      "name": "Handmade pasta place",
+      "cuisine": "Italian",
+      "hood": "West Village",
+      "list": "Been, loved it"
+    },
+    {
+      "id": "r5",
+      "name": "Weekend brunch spot",
+      "cuisine": "Brunch",
+      "hood": "Williamsburg",
+      "list": "Been, loved it"
+    }
   ],
   "shows": [
-    { "id": "s1", "title": "Broadway musical", "date": "@day+15", "detail": "Orchestra, row H" },
-    { "id": "s2", "title": "Jazz night in the Village", "date": "@day+21", "detail": "9:30 PM set" }
+    {
+      "id": "s1",
+      "title": "Broadway musical",
+      "date": "@day+15",
+      "detail": "Orchestra, row H"
+    },
+    {
+      "id": "s2",
+      "title": "Jazz night in the Village",
+      "date": "@day+21",
+      "detail": "9:30 PM set"
+    }
   ],
   "trips": [
-    { "id": "lisbon", "name": "Lisbon and Porto", "cost": 2400, "months": 5, "saved": 960, "status": "Booked", "date": "2027-04-10" },
-    { "id": "tokyo", "name": "Tokyo in cherry blossom season", "cost": 4500, "months": 16, "saved": 1350, "status": "Dreaming", "date": "2028-03-25" },
-    { "id": "beach", "name": "Beach week with the group chat", "cost": 1500, "months": 8, "saved": 0, "status": "Planning", "date": "2027-07-15" }
+    {
+      "id": "lisbon",
+      "name": "Lisbon and Porto",
+      "cost": 2400,
+      "months": 5,
+      "saved": 960,
+      "status": "Booked",
+      "date": "2027-04-10"
+    },
+    {
+      "id": "tokyo",
+      "name": "Tokyo in cherry blossom season",
+      "cost": 4500,
+      "months": 16,
+      "saved": 1350,
+      "status": "Dreaming",
+      "date": "2028-03-25"
+    },
+    {
+      "id": "beach",
+      "name": "Beach week with the group chat",
+      "cost": 1500,
+      "months": 8,
+      "saved": 0,
+      "status": "Planning",
+      "date": "2027-07-15"
+    }
   ],
   "trims": [
-    { "id": "t1", "order": 1, "label": "Unused subscriptions", "how": "Cancel 3 not opened in 60 days", "cap": 34 },
-    { "id": "t2", "order": 2, "label": "Dining out", "how": "From $420 to $300, two fewer dinners", "cap": 120 },
-    { "id": "t3", "order": 3, "label": "Shopping", "how": "Pause non essentials until the trip", "cap": 150 },
-    { "id": "t4", "order": 4, "label": "Coffee and takeout", "how": "Make coffee at home on weekdays", "cap": 60 },
-    { "id": "t5", "order": 5, "label": "Rideshare", "how": "Subway for evening plans", "cap": 40 }
+    {
+      "id": "t1",
+      "order": 1,
+      "label": "Unused subscriptions",
+      "how": "Cancel 3 not opened in 60 days",
+      "cap": 34
+    },
+    {
+      "id": "t2",
+      "order": 2,
+      "label": "Dining out",
+      "how": "From $420 to $300, two fewer dinners",
+      "cap": 120
+    },
+    {
+      "id": "t3",
+      "order": 3,
+      "label": "Shopping",
+      "how": "Pause non essentials until the trip",
+      "cap": 150
+    },
+    {
+      "id": "t4",
+      "order": 4,
+      "label": "Coffee and takeout",
+      "how": "Make coffee at home on weekdays",
+      "cap": 60
+    },
+    {
+      "id": "t5",
+      "order": 5,
+      "label": "Rideshare",
+      "how": "Subway for evening plans",
+      "cap": 40
+    }
   ],
   "goals": [
-    { "id": "g1", "order": 1, "title": "Build an emergency fund", "area": "Money", "horizon": "Long term", "due": "2028-06-30", "link": "savings:emergency", "pct": 0, "steps": "14 of 22 action steps done", "target": 0, "achieved": false },
-    { "id": "g2", "order": 2, "title": "Fully fund the Lisbon trip", "area": "Experiences", "horizon": "Short term", "due": "2027-04-10", "link": "trip:lisbon", "pct": 0, "steps": "", "target": 0, "achieved": false },
-    { "id": "g3", "order": 3, "title": "Strength train 3x a week", "area": "Health", "horizon": "Habit", "due": "2026-12-31", "link": "classes", "pct": 0, "steps": "", "target": 12, "achieved": false },
-    { "id": "g4", "order": 4, "title": "Read 20 books this year", "area": "Learning", "horizon": "This year", "due": "2026-12-31", "link": "books", "pct": 0, "steps": "", "target": 0, "achieved": false }
+    {
+      "id": "g1",
+      "order": 1,
+      "title": "Build an emergency fund",
+      "area": "Money",
+      "horizon": "Long term",
+      "due": "2028-06-30",
+      "link": "savings:emergency",
+      "pct": 0,
+      "steps": "14 of 22 action steps done",
+      "target": 0,
+      "achieved": false
+    },
+    {
+      "id": "g2",
+      "order": 2,
+      "title": "Fully fund the Lisbon trip",
+      "area": "Experiences",
+      "horizon": "Short term",
+      "due": "2027-04-10",
+      "link": "trip:lisbon",
+      "pct": 0,
+      "steps": "",
+      "target": 0,
+      "achieved": false
+    },
+    {
+      "id": "g3",
+      "order": 3,
+      "title": "Strength train 3x a week",
+      "area": "Health",
+      "horizon": "Habit",
+      "due": "2026-12-31",
+      "link": "classes",
+      "pct": 0,
+      "steps": "",
+      "target": 12,
+      "achieved": false
+    },
+    {
+      "id": "g4",
+      "order": 4,
+      "title": "Read 20 books this year",
+      "area": "Learning",
+      "horizon": "This year",
+      "due": "2026-12-31",
+      "link": "books",
+      "pct": 0,
+      "steps": "",
+      "target": 0,
+      "achieved": false
+    }
   ],
   "budget": [
-    { "id": "bc1", "order": 1, "label": "Rent and utilities", "budget": 2150, "spent": 2150, "source": "manual" },
-    { "id": "bc2", "order": 2, "label": "Groceries", "budget": 450, "spent": 310, "source": "manual" },
-    { "id": "bc3", "order": 3, "label": "Dining out", "budget": 400, "spent": 420, "source": "manual" },
-    { "id": "bc4", "order": 4, "label": "Shopping", "budget": 600, "spent": 380, "source": "manual" },
-    { "id": "bc5", "order": 5, "label": "Fitness classes", "budget": 250, "spent": 0, "source": "classes" },
-    { "id": "bc6", "order": 6, "label": "Subscriptions", "budget": 120, "spent": 95, "source": "manual" },
-    { "id": "bc7", "order": 7, "label": "Transportation", "budget": 250, "spent": 140, "source": "manual" }
+    {
+      "id": "bc1",
+      "order": 1,
+      "label": "Rent and utilities",
+      "budget": 2150,
+      "spent": 2150,
+      "source": "manual"
+    },
+    {
+      "id": "bc2",
+      "order": 2,
+      "label": "Groceries",
+      "budget": 450,
+      "spent": 310,
+      "source": "manual"
+    },
+    {
+      "id": "bc3",
+      "order": 3,
+      "label": "Dining out",
+      "budget": 400,
+      "spent": 420,
+      "source": "manual"
+    },
+    {
+      "id": "bc4",
+      "order": 4,
+      "label": "Shopping",
+      "budget": 600,
+      "spent": 380,
+      "source": "manual"
+    },
+    {
+      "id": "bc5",
+      "order": 5,
+      "label": "Fitness classes",
+      "budget": 250,
+      "spent": 0,
+      "source": "classes"
+    },
+    {
+      "id": "bc6",
+      "order": 6,
+      "label": "Subscriptions",
+      "budget": 120,
+      "spent": 95,
+      "source": "manual"
+    },
+    {
+      "id": "bc7",
+      "order": 7,
+      "label": "Transportation",
+      "budget": 250,
+      "spent": 140,
+      "source": "manual"
+    }
   ],
   "savings": [
-    { "id": "emergency", "order": 1, "name": "Emergency fund, 6 months", "target": 30000, "saved": 19200, "monthly": 600, "due": "2028-06-30" },
-    { "id": "roth", "order": 2, "name": "Roth IRA, 2026", "target": 7000, "saved": 3850, "monthly": 400, "due": "2027-04-15" }
+    {
+      "id": "emergency",
+      "order": 1,
+      "name": "Emergency fund, 6 months",
+      "target": 30000,
+      "saved": 19200,
+      "monthly": 600,
+      "due": "2028-06-30"
+    },
+    {
+      "id": "roth",
+      "order": 2,
+      "name": "Roth IRA, 2026",
+      "target": 7000,
+      "saved": 3850,
+      "monthly": 400,
+      "due": "2027-04-15"
+    }
   ],
   "roadmap": [
-    { "id": "rm1", "year": "2027", "title": "Max out Roth IRA every year", "detail": "$7,000 a year", "tag": "Retire" },
-    { "id": "rm2", "year": "2028", "title": "Emergency fund at 6 months", "detail": "$30,000 target", "tag": "Safety" },
-    { "id": "rm3", "year": "2028", "title": "Grad school fund", "detail": "[Set a target] · not started", "tag": "Growth" },
-    { "id": "rm4", "year": "2031", "title": "Home down payment", "detail": "[Set a target] · not started", "tag": "Home" }
+    {
+      "id": "rm1",
+      "year": "2027",
+      "title": "Max out Roth IRA every year",
+      "detail": "$7,000 a year",
+      "tag": "Retire"
+    },
+    {
+      "id": "rm2",
+      "year": "2028",
+      "title": "Emergency fund at 6 months",
+      "detail": "$30,000 target",
+      "tag": "Safety"
+    },
+    {
+      "id": "rm3",
+      "year": "2028",
+      "title": "Grad school fund",
+      "detail": "[Set a target] · not started",
+      "tag": "Growth"
+    },
+    {
+      "id": "rm4",
+      "year": "2031",
+      "title": "Home down payment",
+      "detail": "[Set a target] · not started",
+      "tag": "Home"
+    }
   ],
   "accounts": [
-    { "id": "a1", "order": 1, "name": "Checking", "balance": 4820 },
-    { "id": "a2", "order": 2, "name": "High yield savings", "balance": 19200 },
-    { "id": "a3", "order": 3, "name": "Brokerage and Roth IRA", "balance": 25760 },
-    { "id": "a4", "order": 4, "name": "Credit card balance", "balance": -1180 }
+    {
+      "id": "a1",
+      "order": 1,
+      "name": "Checking",
+      "balance": 4820
+    },
+    {
+      "id": "a2",
+      "order": 2,
+      "name": "High yield savings",
+      "balance": 19200
+    },
+    {
+      "id": "a3",
+      "order": 3,
+      "name": "Brokerage and Roth IRA",
+      "balance": 25760
+    },
+    {
+      "id": "a4",
+      "order": 4,
+      "name": "Credit card balance",
+      "balance": -1180
+    }
   ],
   "bills": [
-    { "id": "bl1", "name": "Credit card", "due": "@day+4", "amount": 1180, "note": "" },
-    { "id": "bl2", "name": "Phone", "due": "@day+7", "amount": 65, "note": "" },
-    { "id": "bl3", "name": "Rent", "due": "@day+10", "amount": 1950, "note": "" },
-    { "id": "bl4", "name": "Class pack renewal", "due": "@day+12", "amount": 140, "note": "" }
+    {
+      "id": "bl1",
+      "name": "Credit card",
+      "due": "@day+4",
+      "amount": 1180,
+      "note": ""
+    },
+    {
+      "id": "bl2",
+      "name": "Phone",
+      "due": "@day+7",
+      "amount": 65,
+      "note": ""
+    },
+    {
+      "id": "bl3",
+      "name": "Rent",
+      "due": "@day+10",
+      "amount": 1950,
+      "note": ""
+    },
+    {
+      "id": "bl4",
+      "name": "Class pack renewal",
+      "due": "@day+12",
+      "amount": 140,
+      "note": ""
+    }
   ],
   "supplements": [
-    { "id": "sp1", "order": 1, "name": "Vitamin D3 + K2", "note": "With breakfast", "timing": "AM" },
-    { "id": "sp2", "order": 2, "name": "Omega 3", "note": "With breakfast", "timing": "AM" },
-    { "id": "sp3", "order": 3, "name": "Iron", "note": "Away from coffee", "timing": "Midday" },
-    { "id": "sp4", "order": 4, "name": "Magnesium glycinate", "note": "An hour before bed", "timing": "PM" }
+    {
+      "id": "sp1",
+      "order": 1,
+      "name": "Vitamin D3 + K2",
+      "note": "With breakfast",
+      "timing": "AM"
+    },
+    {
+      "id": "sp2",
+      "order": 2,
+      "name": "Omega 3",
+      "note": "With breakfast",
+      "timing": "AM"
+    },
+    {
+      "id": "sp3",
+      "order": 3,
+      "name": "Iron",
+      "note": "Away from coffee",
+      "timing": "Midday"
+    },
+    {
+      "id": "sp4",
+      "order": 4,
+      "name": "Magnesium glycinate",
+      "note": "An hour before bed",
+      "timing": "PM"
+    }
   ],
   "skincare": [
-    { "id": "sk1", "time": "AM", "order": 1, "step": "Gentle cleanser", "days": "" },
-    { "id": "sk2", "time": "AM", "order": 2, "step": "Vitamin C serum", "days": "" },
-    { "id": "sk3", "time": "AM", "order": 3, "step": "Moisturizer", "days": "" },
-    { "id": "sk4", "time": "AM", "order": 4, "step": "SPF 50", "days": "" },
-    { "id": "sk5", "time": "PM", "order": 1, "step": "Oil cleanse", "days": "" },
-    { "id": "sk6", "time": "PM", "order": 2, "step": "Gentle cleanser", "days": "" },
-    { "id": "sk7", "time": "PM", "order": 3, "step": "Retinol", "days": "Mon, Wed, Fri" },
-    { "id": "sk8", "time": "PM", "order": 4, "step": "Barrier cream", "days": "" }
+    {
+      "id": "sk1",
+      "time": "AM",
+      "order": 1,
+      "step": "Gentle cleanser",
+      "days": ""
+    },
+    {
+      "id": "sk2",
+      "time": "AM",
+      "order": 2,
+      "step": "Vitamin C serum",
+      "days": ""
+    },
+    {
+      "id": "sk3",
+      "time": "AM",
+      "order": 3,
+      "step": "Moisturizer",
+      "days": ""
+    },
+    {
+      "id": "sk4",
+      "time": "AM",
+      "order": 4,
+      "step": "SPF 50",
+      "days": ""
+    },
+    {
+      "id": "sk5",
+      "time": "PM",
+      "order": 1,
+      "step": "Oil cleanse",
+      "days": ""
+    },
+    {
+      "id": "sk6",
+      "time": "PM",
+      "order": 2,
+      "step": "Gentle cleanser",
+      "days": ""
+    },
+    {
+      "id": "sk7",
+      "time": "PM",
+      "order": 3,
+      "step": "Retinol",
+      "days": "Mon, Wed, Fri"
+    },
+    {
+      "id": "sk8",
+      "time": "PM",
+      "order": 4,
+      "step": "Barrier cream",
+      "days": ""
+    }
   ],
   "habits": [
-    { "id": "h1", "order": 1, "name": "Close all three rings", "done": ["@day-1", "@day-2", "@day-4", "@day-6"] },
-    { "id": "h2", "order": 2, "name": "10 minute stretch", "done": ["@day-1", "@day-2", "@day-3", "@day-5", "@day-6"] },
-    { "id": "h3", "order": 3, "name": "8 cups of water", "done": ["@day-2", "@day-3", "@day-5", "@day-6"] },
-    { "id": "h4", "order": 4, "name": "Screens off by 11", "done": ["@day-2", "@day-4", "@day-6"] }
+    {
+      "id": "h1",
+      "order": 1,
+      "name": "Close all three rings",
+      "done": [
+        "@day-1",
+        "@day-2",
+        "@day-4",
+        "@day-6"
+      ]
+    },
+    {
+      "id": "h2",
+      "order": 2,
+      "name": "10 minute stretch",
+      "done": [
+        "@day-1",
+        "@day-2",
+        "@day-3",
+        "@day-5",
+        "@day-6"
+      ]
+    },
+    {
+      "id": "h3",
+      "order": 3,
+      "name": "8 cups of water",
+      "done": [
+        "@day-2",
+        "@day-3",
+        "@day-5",
+        "@day-6"
+      ]
+    },
+    {
+      "id": "h4",
+      "order": 4,
+      "name": "Screens off by 11",
+      "done": [
+        "@day-2",
+        "@day-4",
+        "@day-6"
+      ]
+    }
   ],
   "wishlist": [
-    { "id": "w1", "text": "Facial before the holidays", "tag": "Book", "done": false },
-    { "id": "w2", "text": "Reformer class pack", "tag": "Try", "done": false },
-    { "id": "w3", "text": "Silk pillowcase", "tag": "Buy", "done": false },
-    { "id": "w4", "text": "Annual physical", "tag": "Schedule", "done": false }
+    {
+      "id": "w1",
+      "text": "Facial before the holidays",
+      "tag": "Book",
+      "done": false
+    },
+    {
+      "id": "w2",
+      "text": "Reformer class pack",
+      "tag": "Try",
+      "done": false
+    },
+    {
+      "id": "w3",
+      "text": "Silk pillowcase",
+      "tag": "Buy",
+      "done": false
+    },
+    {
+      "id": "w4",
+      "text": "Annual physical",
+      "tag": "Schedule",
+      "done": false
+    }
   ],
   "people": [
-    { "id": "pp1", "name": "Former mentor", "lastContact": "@day-60", "note": "" },
-    { "id": "pp2", "name": "Friend from home", "lastContact": "@day-42", "note": "" },
-    { "id": "pp3", "name": "Cousin", "lastContact": "@day-28", "note": "" }
+    {
+      "id": "pp1",
+      "name": "Former mentor",
+      "lastContact": "@day-60",
+      "note": ""
+    },
+    {
+      "id": "pp2",
+      "name": "Friend from home",
+      "lastContact": "@day-42",
+      "note": ""
+    },
+    {
+      "id": "pp3",
+      "name": "Cousin",
+      "lastContact": "@day-28",
+      "note": ""
+    }
   ],
   "calendar": [
-    { "id": "e1", "date": "@day+0", "time": "09:00", "title": "Deep work block", "area": "Work" },
-    { "id": "e2", "date": "@day+0", "time": "12:30", "title": "Lunch with a friend", "area": "Social" },
-    { "id": "e3", "date": "@day+0", "time": "15:00", "title": "Month end review", "area": "Work" },
-    { "id": "e4", "date": "@day+0", "time": "19:00", "title": "Reformer Pilates", "area": "Health" },
-    { "id": "e5", "date": "@day+1", "time": "11:00", "title": "Brunch with college friends", "area": "Social" },
-    { "id": "e6", "date": "@day+2", "time": "17:00", "title": "Call with family", "area": "Social" },
-    { "id": "e7", "date": "@day+5", "time": "19:00", "title": "Book club", "area": "Social" }
+    {
+      "id": "e1",
+      "date": "@day+0",
+      "time": "09:00",
+      "title": "Deep work block",
+      "area": "Work"
+    },
+    {
+      "id": "e2",
+      "date": "@day+0",
+      "time": "12:30",
+      "title": "Lunch with a friend",
+      "area": "Social"
+    },
+    {
+      "id": "e3",
+      "date": "@day+0",
+      "time": "15:00",
+      "title": "Month end review",
+      "area": "Work"
+    },
+    {
+      "id": "e4",
+      "date": "@day+0",
+      "time": "19:00",
+      "title": "Reformer Pilates",
+      "area": "Health"
+    },
+    {
+      "id": "e5",
+      "date": "@day+1",
+      "time": "11:00",
+      "title": "Brunch with college friends",
+      "area": "Social"
+    },
+    {
+      "id": "e6",
+      "date": "@day+2",
+      "time": "17:00",
+      "title": "Call with family",
+      "area": "Social"
+    },
+    {
+      "id": "e7",
+      "date": "@day+5",
+      "time": "19:00",
+      "title": "Book club",
+      "area": "Social"
+    }
   ],
   "health": [
-    { "date": "@day+0", "sleepMin": 460, "bed": "23:20", "wake": "07:05", "hrv": 57, "hrvBaseline": 61, "hrv7": 55, "restingHr": 58, "restingHrWeekChange": -2, "steps": 8400, "stepGoal": 10000, "move": 410, "moveGoal": 500, "exercise": 22, "exerciseGoal": 30, "stand": 9, "standGoal": 12 }
+    {
+      "date": "@day+0",
+      "sleepMin": 460,
+      "bed": "23:20",
+      "wake": "07:05",
+      "hrv": 57,
+      "hrvBaseline": 61,
+      "hrv7": 55,
+      "restingHr": 58,
+      "restingHrWeekChange": -2,
+      "steps": 8400,
+      "stepGoal": 10000,
+      "move": 410,
+      "moveGoal": 500,
+      "exercise": 22,
+      "exerciseGoal": 30,
+      "stand": 9,
+      "standGoal": 12
+    }
+  ],
+  "studios": [
+    {
+      "id": "st1",
+      "order": 1,
+      "name": "Chelsea studio",
+      "type": "Pilates",
+      "pastVisits": 12,
+      "price": 38
+    },
+    {
+      "id": "st2",
+      "order": 2,
+      "name": "Flatiron",
+      "type": "HIIT",
+      "pastVisits": 3,
+      "price": 34
+    },
+    {
+      "id": "st3",
+      "order": 3,
+      "name": "Home gym",
+      "type": "Gym",
+      "pastVisits": 0,
+      "price": 0
+    },
+    {
+      "id": "st4",
+      "order": 4,
+      "name": "Williamsburg",
+      "type": "Hot Yoga",
+      "pastVisits": 5,
+      "price": 30
+    },
+    {
+      "id": "st5",
+      "order": 5,
+      "name": "Soho",
+      "type": "Spin",
+      "pastVisits": 2,
+      "price": 36
+    }
   ]
 }
