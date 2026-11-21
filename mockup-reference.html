@@ -1,0 +1,1048 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Akosua's command center</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&amp;family=Pinyon+Script&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#D8CFC1;font-family:Inter,system-ui,sans-serif;color:#141B2C}
+a{color:#1C2A47}a:hover{color:#141B2C}
+button,input,select,textarea{font-family:inherit}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid #1C2A47;outline-offset:2px}
+.app{display:flex;min-height:100vh;background:#D8CFC1}
+.side{flex:0 0 250px;background:#0F1A2E;border-right:1px solid #0F1A2E;display:flex;flex-direction:column;gap:18px;padding:24px 18px 24px 16px;box-sizing:border-box;position:relative}
+.stripe{position:absolute;top:0;right:0;bottom:0;width:10px;background:repeating-linear-gradient(180deg,#0F1A2E 0 14px,#E9E1D2 14px 28px)}
+.navlist{display:flex;flex-direction:column;gap:4px}
+.navbtn{display:flex;align-items:center;gap:10px;min-height:44px;padding:8px 12px;border-radius:10px;border:1px solid transparent;background:transparent;color:#E9E1D2;font-size:14px;font-weight:500;cursor:pointer;text-align:left}
+.navbtn svg{flex:none}
+.navbtn .navlbl{flex:1}
+.status{margin-top:auto;display:flex;flex-direction:column;gap:6px;font-size:11px;color:#CBBFA9}
+.dot{width:7px;height:7px;border-radius:4px;background:#9AAA5E;display:inline-block;margin-right:6px}
+.main{flex:1;min-width:0;padding:28px 28px 48px;box-sizing:border-box;display:flex;flex-direction:column;gap:18px;max-width:1240px}
+.card{background:#F3EEE6;border:1px solid #CDC2B0;border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:14px;min-width:0;box-sizing:border-box}
+.lbl{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#544F47}
+.h2{margin:0;font-family:Newsreader,Georgia,serif;font-size:22px;font-weight:500;color:#141B2C}
+.num{font-family:Newsreader,Georgia,serif;font-size:32px;font-weight:500;line-height:1;color:#141B2C}
+.unit{font-size:13px;color:#544F47;margin-left:3px}
+.sub{font-size:12px;color:#544F47;line-height:1.4}
+.track{height:5px;background:#D6CCBC;border-radius:3px}
+.fill{height:5px;background:#1C2A47;border-radius:3px}
+.fill-warn{height:5px;background:#A4472B;border-radius:3px}
+.tag{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:3px 7px;border-radius:999px;white-space:nowrap}
+.t-work{background:#E2E5EC;color:#1A2540}.t-health{background:#E6E8D8;color:#4A5530}.t-money{background:#EFE4D8;color:#5C3E28}.t-social{background:#F0E0D6;color:#7A3E26}.t-learn{background:#E5E1EA;color:#3E3560}.t-plain{background:#E4DDD1;color:#4B463E}
+.row{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.line{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #DCD3C4;font-size:14px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;align-items:start}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;align-items:start}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.stat{background:#F3EEE6;border:1px solid #CDC2B0;border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.goal{display:flex;flex-direction:column;gap:6px;padding-bottom:12px;border-bottom:1px solid #DCD3C4}
+.goal-t{font-size:13px;font-weight:600}
+.pct{font-size:12px;color:#544F47}
+.field{min-height:44px;border:1px solid #BDB2A0;border-radius:10px;padding:0 12px;font-size:14px;background:#F3EEE6;color:#141B2C;box-sizing:border-box;width:100%}
+.area{border:1px solid #BDB2A0;border-radius:10px;padding:10px 12px;font-size:14px;line-height:1.5;background:#F3EEE6;color:#141B2C;resize:vertical;box-sizing:border-box;width:100%}
+.btn{min-height:46px;border:none;border-radius:10px;background:#0F1A2E;color:#FFFFFF;font-size:15px;font-weight:600;cursor:pointer;padding:0 18px}
+.btn2{min-height:44px;border:1px solid #0F1A2E;border-radius:10px;background:#F3EEE6;color:#0F1A2E;font-size:14px;font-weight:600;cursor:pointer;padding:0 14px}
+.chrome{background:linear-gradient(180deg,#FFFFFF 0%,#E9E1D2 40%,#AEB6C2 52%,#E8EBEF 100%);border:1px solid #AEB6C2}
+.chrome-text{background:linear-gradient(180deg,#FFFFFF 0%,#D9DEE5 45%,#9BA4B1 55%,#F2F4F7 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.masonry{columns:3 280px;column-gap:16px}
+.masonry > *{break-inside:avoid;margin-bottom:16px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.mobile-top{display:none}
+@media (max-width:760px){
+.app{flex-direction:column}
+.side{flex:none;padding:0;border:none;background:transparent}
+.side .brand,.side .search,.side .status,.stripe{display:none}
+.navlist{position:fixed;left:0;right:0;bottom:0;z-index:20;flex-direction:row;justify-content:space-around;gap:0;background:#0F1A2E;padding:6px 4px 14px;border-top:3px solid #AEB6C2}
+.navbtn{flex-direction:column;gap:3px;padding:6px 4px;min-width:52px;font-size:10px;color:#E9E1D2;border:none}
+.navbtn .soon{display:none}
+.mobile-top{display:flex;flex-direction:column;gap:10px}
+.main{padding:16px 14px 110px}
+}
+</style>
+</helmet>
+<div class="app">
+
+<aside class="side" aria-label="Command center navigation">
+<div class="stripe" aria-hidden="true"></div>
+<div class="brand" style="display: flex; flex-direction: column; gap: 0; padding-right: 10px">
+<span style="font-family: Newsreader, Georgia, serif; font-size: 22px; font-weight: 500; color: #E9E1D2">Akosua's</span>
+<span style="font-family: 'Pinyon Script', cursive; font-size: 32px; line-height: 1; color: #BDB2A0">command center</span>
+</div>
+<div class="search" style="padding-right: 10px">
+<label for="gsearch" class="sr">Search everything</label>
+<input id="gsearch" type="search" class="field" value="{{query}}" onInput="{{onQuery}}" placeholder="Search everything">
+</div>
+<nav class="navlist" aria-label="Sections" style="padding-right: 10px">
+<button type="button" class="navbtn" onClick="{{nav.overview.pick}}" aria-pressed="{{nav.overview.pressed}}" style="{{nav.overview.style}}"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"></path></svg><span class="navlbl">Home</span></button>
+<button type="button" class="navbtn" onClick="{{nav.dump.pick}}" aria-pressed="{{nav.dump.pressed}}" style="{{nav.dump.style}}"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13h5l2 3h4l2-3h5"></path><path d="M5 5h14l2 8v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-6z"></path></svg><span class="navlbl">Dump</span></button>
+<button type="button" class="navbtn" onClick="{{nav.finance.pick}}" aria-pressed="{{nav.finance.pressed}}" style="{{nav.finance.style}}"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"></rect><path d="M16 12.5h2M3 10h18"></path></svg><span class="navlbl">Money</span></button>
+<button type="button" class="navbtn" onClick="{{nav.health.pick}}" aria-pressed="{{nav.health.pressed}}" style="{{nav.health.style}}"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-5 4 10 2-5h6"></path></svg><span class="navlbl">Health</span></button>
+<button type="button" class="navbtn" onClick="{{nav.social.pick}}" aria-pressed="{{nav.social.pressed}}" style="{{nav.social.style}}"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"></path><path d="M16 4.8a3.5 3.5 0 0 1 0 6.4M18.5 14.8c1.6.8 2.6 2.6 3 5.2"></path></svg><span class="navlbl">Social</span></button>
+<button type="button" class="navbtn" onClick="{{nav.job.pick}}" aria-pressed="{{nav.job.pressed}}" style="{{nav.job.style}}"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"></rect><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M3 13h18"></path></svg><span class="navlbl">Work</span><span class="tag t-plain soon">Soon</span></button>
+</nav>
+<div class="status" style="padding-right: 10px">
+<span><span class="dot"></span>Calendar synced 8:30 PM</span>
+<span><span class="dot"></span>Apple Watch synced 8:30 PM</span>
+<span><span class="dot" style="background: #B07A1E"></span>Rocket Money export Nov 17, next due Nov 24</span>
+<span><span class="dot"></span>Saved on this phone</span>
+</div>
+</aside>
+
+<main class="main">
+
+<div class="mobile-top">
+<div style="display: flex; align-items: baseline; gap: 8px"><span style="font-family: Newsreader, Georgia, serif; font-size: 18px; color: #0F1A2E">Akosua's</span><span style="font-family: 'Pinyon Script', cursive; font-size: 28px; line-height: 1; color: #1C2A47">command center</span></div>
+<label for="gsearch2" class="sr">Search everything</label>
+<input id="gsearch2" type="search" class="field" value="{{query}}" onInput="{{onQuery}}" placeholder="Search everything">
+</div>
+
+<section aria-label="Page cover" style="position: relative; overflow: hidden; border-radius: 16px; background: #0F1A2E; padding: 28px 30px; min-height: 160px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; gap: 14px">
+<div aria-hidden="true" style="position: absolute; left: 0; right: 0; top: 0; height: 8px; background: repeating-linear-gradient(90deg, #BDB2A0 0 18px, #0F1A2E 18px 36px)"></div>
+<svg aria-hidden="true" width="300" height="170" viewBox="0 0 300 170" style="position: absolute; right: 0; bottom: 0; opacity: 0.35"><path d="M30 170 V100 a45 45 0 0 1 90 0 V170" fill="none" stroke="#BDB2A0" stroke-width="2"></path><path d="M140 170 V70 a60 60 0 0 1 120 0 V170" fill="none" stroke="#BDB2A0" stroke-width="2"></path><circle cx="270" cy="40" r="16" fill="none" stroke="#BDB2A0" stroke-width="2"></circle></svg>
+<span class="lbl" style="position: relative; color: #CBBFA9; margin-top: 6px">Sample data · Friday, Nov 20</span>
+<div style="position: relative; display: flex; flex-direction: column; gap: 6px">
+<h1 class="chrome-text" style="margin: 0; font-family: Newsreader, Georgia, serif; font-size: 52px; font-weight: 500; letter-spacing: 0.2em; line-height: 1">{{bannerTitle}}</h1>
+<span style="font-family: Newsreader, Georgia, serif; font-style: italic; font-size: 17px; color: #E9E1D2">{{bannerSub}}</span>
+</div>
+</section>
+
+<sc-if value="{{searching}}" hint-placeholder-val="{{ false }}">
+<section class="card" aria-label="Search results">
+<div class="row"><h2 class="h2">Results for "{{query}}"</h2><span class="sub">{{resultCount}} found</span></div>
+<sc-for list="{{results}}" as="rs" hint-placeholder-count="3">
+<button type="button" onClick="{{rs.pick}}" style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 8px 0; background: transparent; border: none; border-bottom: 1px solid #DCD3C4; text-align: left; cursor: pointer; color: #141B2C"><span class="{{rs.tagClass}}">{{rs.kind}}</span><span style="flex: 1; font-size: 14px; font-weight: 600">{{rs.title}}</span><span class="sub">{{rs.where}}</span></button>
+</sc-for>
+<sc-if value="{{noResults}}" hint-placeholder-val="{{ false }}"><span class="sub">Nothing matches yet. Try a title, a cuisine or a studio.</span></sc-if>
+</section>
+</sc-if>
+
+<sc-if value="{{notSearching}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; gap: 18px">
+
+<sc-if value="{{hasSubs}}" hint-placeholder-val="{{ true }}">
+<nav aria-label="Subpages" style="display: flex; gap: 4px; border-bottom: 1px solid #CDC2B0; overflow-x: auto">
+<sc-for list="{{subs}}" as="sb" hint-placeholder-count="3">
+<button type="button" onClick="{{sb.pick}}" aria-pressed="{{sb.pressed}}" style="{{sb.style}}">{{sb.label}}</button>
+</sc-for>
+</nav>
+</sc-if>
+
+<sc-if value="{{showTrend}}" hint-placeholder-val="{{ true }}">
+<section aria-label="How you are doing" style="display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px">
+<h2 class="h2">How you are doing</h2>
+<div style="display: flex; gap: 6px" role="group" aria-label="Time period">
+<sc-for list="{{periods}}" as="pd" hint-placeholder-count="3">
+<button type="button" onClick="{{pd.pick}}" aria-pressed="{{pd.pressed}}" style="{{pd.style}}">{{pd.label}}</button>
+</sc-for>
+</div>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px">
+<sc-for list="{{trendCards}}" as="tc" hint-placeholder-count="3">
+<div style="background: #F3EEE6; border: 1px solid #CDC2B0; border-top: 4px solid #6B4A33; border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0">
+<span style="font-family: Newsreader, Georgia, serif; font-size: 19px">{{tc.area}}</span>
+<div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="{{tc.p1Style}}">{{tc.p1}}</span><span class="sub">{{tc.p1Label}}</span></div>
+<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px"><span style="{{tc.p2Style}}">{{tc.p2}}</span><span class="sub">{{tc.p2Label}}</span></div>
+</div>
+<div style="display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid #DCD3C4; padding-top: 10px; font-size: 12px; color: #544F47"><span>{{tc.foot}}</span><span>vs prior {{period}} days</span></div>
+</div>
+</sc-for>
+</div>
+</section>
+</sc-if>
+
+<sc-if value="{{v.overview_today}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: stretch">
+<section aria-label="Clock" class="card" style="flex: 1 1 260px; flex-direction: row; align-items: center; justify-content: center; gap: 12px">
+<div class="chrome" style="width: 100px; height: 116px; border-radius: 10px; position: relative; display: flex; align-items: center; justify-content: center"><span style="font-family: Newsreader, Georgia, serif; font-size: 64px; color: #0F1A2E">{{clockH}}</span><span style="position: absolute; left: 0; right: 0; top: 50%; border-top: 1px solid #9BA4B1"></span><span style="position: absolute; left: 8px; bottom: 6px; font-size: 10px; font-weight: 700; color: #0F1A2E">{{clockAmPm}}</span></div>
+<div class="chrome" style="width: 100px; height: 116px; border-radius: 10px; position: relative; display: flex; align-items: center; justify-content: center"><span style="font-family: Newsreader, Georgia, serif; font-size: 64px; color: #0F1A2E">{{clockM}}</span><span style="position: absolute; left: 0; right: 0; top: 50%; border-top: 1px solid #9BA4B1"></span><span style="position: absolute; right: 8px; bottom: 6px; font-size: 10px; font-weight: 700; color: #0F1A2E">{{clockDay}}</span></div>
+</section>
+<sc-for list="{{arches}}" as="ar" hint-placeholder-count="4">
+<button type="button" onClick="{{ar.pick}}" style="flex: 1 1 140px; border: none; padding: 0; background: transparent; cursor: pointer; display: flex; flex-direction: column; gap: 8px; color: #141B2C">
+<span class="chrome" style="position: relative; display: flex; align-items: flex-end; justify-content: center; width: 100%; height: 150px; border-radius: 999px 999px 12px 12px; box-sizing: border-box; padding-bottom: 14px"><span style="font-family: Newsreader, Georgia, serif; font-size: 28px; color: #0F1A2E">{{ar.stat}}</span></span>
+<span style="font-family: Newsreader, Georgia, serif; font-size: 16px; text-align: center">{{ar.label}}</span>
+</button>
+</sc-for>
+</div>
+
+<div class="grid3">
+<section aria-label="Priorities now" style="background: #F3EEE6; border: 1px solid #CDC2B0; border-top: 6px solid #0F1A2E; border-radius: 6px; padding: 22px 20px 20px; display: flex; flex-direction: column; gap: 10px; position: relative; min-width: 0; box-shadow: 0 8px 18px rgba(19, 33, 60, 0.08)">
+<span aria-hidden="true" class="chrome" style="position: absolute; top: -11px; left: 50%; width: 18px; height: 18px; border-radius: 9px"></span>
+<h2 class="h2">Priorities now</h2>
+<span class="lbl">From your calendar</span>
+<sc-for list="{{calPriorities}}" as="cp" hint-placeholder-count="2">
+<div style="display: flex; gap: 10px; font-size: 14px"><span style="width: 44px; color: #544F47; font-size: 12px; padding-top: 2px">{{cp.time}}</span><span style="flex: 1">{{cp.text}}</span></div>
+</sc-for>
+<span class="lbl" style="margin-top: 6px">Added by you</span>
+<sc-for list="{{myPriorities}}" as="mp" hint-placeholder-count="2">
+<button type="button" onClick="{{mp.toggle}}" aria-pressed="{{mp.done}}" style="display: flex; align-items: center; gap: 10px; min-height: 40px; background: transparent; border: none; padding: 0; text-align: left; cursor: pointer; color: #141B2C"><span style="{{mp.boxStyle}}"></span><span style="{{mp.textStyle}}">{{mp.text}}</span></button>
+</sc-for>
+<div style="display: flex; gap: 8px">
+<label for="newprio" class="sr">Add a priority</label>
+<input id="newprio" type="text" class="field" value="{{prioDraft}}" onInput="{{onPrioDraft}}" placeholder="Add a priority">
+<button type="button" class="btn2" onClick="{{addPriority}}">Add</button>
+</div>
+</section>
+
+<section class="card" aria-label="Calendar">
+<div class="row"><h2 class="h2">Calendar</h2><span class="sub">Today</span></div>
+<div class="line"><span style="width: 52px; color: #544F47; font-size: 12px">9:00</span><span style="flex: 1; font-weight: 600">Deep work block</span><span class="tag t-work">Work</span></div>
+<div class="line"><span style="width: 52px; color: #544F47; font-size: 12px">12:30</span><span style="flex: 1; font-weight: 600">Lunch with a friend</span><span class="tag t-social">Social</span></div>
+<div class="line"><span style="width: 52px; color: #544F47; font-size: 12px">3:00</span><span style="flex: 1; font-weight: 600">Month end review</span><span class="tag t-work">Work</span></div>
+<div class="line" style="border-bottom: none"><span style="width: 52px; color: #544F47; font-size: 12px">7:00</span><span style="flex: 1; font-weight: 600">Reformer Pilates</span><span class="tag t-health">Health</span></div>
+</section>
+
+<section class="card" aria-label="Recently dumped">
+<div class="row"><h2 class="h2">Recently dumped</h2><span class="sub">Latest 3</span></div>
+<sc-for list="{{recentDump}}" as="rd" hint-placeholder-count="3">
+<button type="button" onClick="{{rd.pick}}" style="display: flex; flex-direction: column; gap: 4px; min-height: 44px; padding: 8px 0; background: transparent; border: none; border-bottom: 1px solid #DCD3C4; text-align: left; cursor: pointer; color: #141B2C"><span class="{{rd.tagClass}}" style="align-self: flex-start">{{rd.type}}</span><span style="font-size: 14px; font-weight: 600">{{rd.title}}</span></button>
+</sc-for>
+</section>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{v.overview_goals}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 16px">
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px">
+<sc-for list="{{goalCards}}" as="gc" hint-placeholder-count="4">
+<div class="card" style="padding: 0; overflow: hidden; gap: 0">
+<div class="chrome" style="height: 90px; border: none; border-bottom: 1px solid #AEB6C2; display: flex; align-items: flex-end; padding: 12px 16px; box-sizing: border-box"><span style="font-family: Newsreader, Georgia, serif; font-size: 30px; color: #0F1A2E">{{gc.pct}}%</span></div>
+<div style="padding: 16px; display: flex; flex-direction: column; gap: 8px">
+<strong style="font-size: 15px">{{gc.title}}</strong>
+<div style="display: flex; flex-wrap: wrap; gap: 6px"><span class="{{gc.tagClass}}">{{gc.area}}</span><span class="tag t-plain">{{gc.horizon}}</span></div>
+<span class="sub">{{gc.when}}</span>
+<div class="track"><div class="fill" style="{{gc.fillStyle}}"></div></div>
+<span class="sub">{{gc.steps}}</span>
+</div>
+</div>
+</sc-for>
+</div>
+<section class="card" aria-label="Life areas">
+<div class="row"><h2 class="h2">Life areas</h2><span class="sub">Tap to open</span></div>
+<div class="grid3">
+<sc-for list="{{areas}}" as="a" hint-placeholder-count="4">
+<button type="button" onClick="{{a.pick}}" style="display: flex; flex-direction: column; gap: 6px; min-height: 44px; padding: 4px 0 10px; background: transparent; border: none; border-bottom: 1px solid #DCD3C4; text-align: left; cursor: pointer; color: #141B2C">
+<span style="display: flex; justify-content: space-between; width: 100%; font-size: 13px"><span style="font-weight: 600">{{a.label}}</span><span style="color: #544F47">{{a.score}}</span></span>
+<span class="track" style="display: block; width: 100%"><span class="fill" style="{{a.fillStyle}}"></span></span>
+<span class="sub">{{a.note}}</span>
+</button>
+</sc-for>
+</div>
+</section>
+</div>
+</sc-if>
+
+<sc-if value="{{v.dump_all}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 16px">
+<section class="card" aria-label="Paste a link">
+<div class="row" style="flex-wrap: wrap"><h2 class="h2">Paste a link</h2><span class="sub">Articles, think pieces, Substacks, films, TV, anything worth keeping</span></div>
+<label for="dlink" class="sr">Link</label>
+<input id="dlink" type="url" class="field" value="{{dForm.url}}" onInput="{{onDUrl}}" placeholder="Paste a link from your phone" style="min-height: 52px; font-size: 16px">
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px">
+<div style="display: flex; flex-direction: column; gap: 6px"><label for="dtype" class="lbl">What is it</label>
+<select id="dtype" class="field" value="{{dForm.type}}" onChange="{{onDType}}"><option value="Article">Article</option><option value="Think piece">Think piece</option><option value="Substack">Substack</option><option value="Perspective">New perspective</option><option value="Film">Film</option><option value="TV show">TV show</option></select></div>
+<div style="display: flex; flex-direction: column; gap: 6px"><label for="dtitle" class="lbl">Title (optional)</label>
+<input id="dtitle" type="text" class="field" value="{{dForm.title}}" onInput="{{onDTitle}}" placeholder="Leave blank to use the link"></div>
+</div>
+<label for="dnote" class="lbl">My take (optional)</label>
+<textarea id="dnote" rows="2" class="area" value="{{dForm.note}}" onInput="{{onDNote}}" placeholder="What stuck with you"></textarea>
+<button type="button" class="btn" onClick="{{addDump}}">Dump it</button>
+</section>
+
+<div style="display: flex; flex-wrap: wrap; gap: 6px" role="group" aria-label="Filter by type">
+<sc-for list="{{dFilters}}" as="df" hint-placeholder-count="7">
+<button type="button" onClick="{{df.pick}}" aria-pressed="{{df.pressed}}" style="{{df.style}}">{{df.label}}</button>
+</sc-for>
+</div>
+
+<div class="masonry">
+<sc-for list="{{shownDump}}" as="d" hint-placeholder-count="4">
+<article class="card" style="gap: 10px">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px"><span class="{{d.tagClass}}">{{d.type}}</span><span class="sub">{{d.source}} · {{d.date}}</span></div>
+<a href="{{d.url}}" target="_blank" rel="noopener" style="font-family: Newsreader, Georgia, serif; font-size: 20px; line-height: 1.25; color: #141B2C; text-decoration: none">{{d.title}}</a>
+<sc-if value="{{d.hasNote}}" hint-placeholder-val="{{ true }}"><div style="background: #D8CFC1; border-left: 3px solid #1C2A47; border-radius: 6px; padding: 10px 12px; font-size: 14px; line-height: 1.5; color: #2E2A24"><strong>My take:</strong> {{d.note}}</div></sc-if>
+<div style="display: flex; align-items: center; gap: 2px" role="group" aria-label="Rating">
+<sc-for list="{{d.stars}}" as="st" hint-placeholder-count="5">
+<button type="button" onClick="{{st.pick}}" aria-label="{{st.aria}}" style="{{st.style}}">★</button>
+</sc-for>
+</div>
+<sc-for list="{{d.comments}}" as="cm" hint-placeholder-count="1">
+<div style="display: flex; gap: 10px; font-size: 14px; line-height: 1.5; color: #48443D; padding-left: 12px; border-left: 2px solid #CDC2B0"><span style="flex: 1">{{cm.text}}</span><span class="sub" style="white-space: nowrap">{{cm.date}}</span></div>
+</sc-for>
+<div style="display: flex; gap: 8px">
+<label for="{{d.inputId}}" class="sr">Add a comment</label>
+<input id="{{d.inputId}}" type="text" class="field" value="{{d.draft}}" onInput="{{d.onDraft}}" placeholder="Add a thought">
+<button type="button" class="btn2" onClick="{{d.addComment}}">Post</button>
+</div>
+</article>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{v.dump_books}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 16px">
+<section class="card" aria-label="Reading goal" style="flex-direction: row; flex-wrap: wrap; align-items: center; gap: 20px">
+<div style="display: flex; flex-direction: column; gap: 4px; flex: 1 1 220px"><span class="lbl">Reading goal this year</span><div><span class="num" style="font-size: 44px">{{readCount}}</span><span class="unit">of 20 books</span></div><span class="sub">{{readPace}}</span></div>
+<div style="flex: 2 1 280px; display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 6px">
+<sc-for list="{{goalSpines}}" as="gs" hint-placeholder-count="20">
+<span style="{{gs.style}}"></span>
+</sc-for>
+</div>
+</section>
+<div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start">
+<section class="card" aria-label="Write a mini review" style="flex: 1 1 300px">
+<h2 class="h2">Write a mini review</h2>
+<label for="btitle" class="lbl">Book</label>
+<input id="btitle" type="text" class="field" value="{{bForm.title}}" onInput="{{onBTitle}}" placeholder="Title">
+<label for="bauthor" class="lbl">Author</label>
+<input id="bauthor" type="text" class="field" value="{{bForm.author}}" onInput="{{onBAuthor}}" placeholder="Author">
+<label for="bstatus" class="lbl">Shelf</label>
+<select id="bstatus" class="field" value="{{bForm.status}}" onChange="{{onBStatus}}"><option value="Read">Read</option><option value="Reading">Currently reading</option><option value="Want to read">Want to read</option></select>
+<span class="lbl">Rating</span>
+<div style="display: flex; gap: 2px">
+<sc-for list="{{bStars}}" as="bs" hint-placeholder-count="5">
+<button type="button" onClick="{{bs.pick}}" aria-label="{{bs.aria}}" style="{{bs.style}}">★</button>
+</sc-for>
+</div>
+<label for="breview" class="lbl">Review</label>
+<textarea id="breview" rows="4" class="area" value="{{bForm.review}}" onInput="{{onBReview}}" placeholder="A few lines: what stuck with you, who should read it"></textarea>
+<button type="button" class="btn" onClick="{{addBook}}">Add to shelf</button>
+</section>
+<section aria-label="Bookshelf" style="flex: 999 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px">
+<h2 class="h2">Bookshelf</h2>
+<div style="display: flex; flex-wrap: wrap; gap: 6px" role="group" aria-label="Filter by shelf">
+<sc-for list="{{bFilters}}" as="bf" hint-placeholder-count="4">
+<button type="button" onClick="{{bf.pick}}" aria-pressed="{{bf.pressed}}" style="{{bf.style}}">{{bf.label}}</button>
+</sc-for>
+</div>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px">
+<sc-for list="{{shownBooks}}" as="bk" hint-placeholder-count="4">
+<article class="card" style="flex-direction: row; gap: 14px; padding: 16px">
+<div style="{{bk.coverStyle}}"><span style="font-family: Newsreader, Georgia, serif; font-size: 12px; line-height: 1.2; color: #FFFFFF">{{bk.title}}</span></div>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px">
+<strong style="font-family: Newsreader, Georgia, serif; font-size: 18px; font-weight: 500; line-height: 1.2">{{bk.title}}</strong>
+<span class="sub">{{bk.author}}</span>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px"><span style="letter-spacing: 2px; font-size: 14px"><span style="color: #1C2A47">{{bk.on}}</span><span style="color: #BDB2A0">{{bk.off}}</span></span><span class="tag t-plain">{{bk.status}}</span></div>
+<p style="margin: 0; font-family: Newsreader, Georgia, serif; font-style: italic; font-size: 15px; line-height: 1.45; color: #3A3630">{{bk.review}}</p>
+</div>
+</article>
+</sc-for>
+</div>
+</section>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{v.finance_overview}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 16px">
+<section aria-label="Finance numbers" class="stats">
+<div class="stat"><span class="lbl">Left to spend</span><span class="num">$1,240</span><span class="sub">About $124 a day</span></div>
+<div class="stat"><span class="lbl">Savings rate</span><span class="num">22%</span><span class="sub">Target 25%</span></div>
+<div class="stat"><span class="lbl">Net worth</span><span class="num">$48,600</span><span class="sub">Up $1,900 this month</span></div>
+<div class="stat"><span class="lbl">Card due Nov 25</span><span class="num">$1,180</span><span class="sub">Autopay on</span></div>
+</section>
+<div class="grid3">
+<section class="card" aria-label="Rocket Money export">
+<div class="row"><h2 class="h2">Weekly export</h2><span class="tag t-money">Due Nov 24</span></div>
+<p style="margin: 0; font-size: 14px; line-height: 1.5; color: #48443D">Every week, export your transactions from Rocket Money as a CSV and drop it here. Budgets, goals and the purchase check all update from it.</p>
+<div class="line"><span>Last export</span><span style="font-weight: 600">Nov 17 · 142 transactions</span></div>
+<div class="line" style="border-bottom: none"><span>Covers</span><span style="font-weight: 600">Checking, savings, card, brokerage</span></div>
+<label class="btn2" style="display: flex; align-items: center; justify-content: center">Upload this week's CSV<input type="file" accept=".csv" class="sr"></label>
+</section>
+<section class="card" aria-label="Money snapshot">
+<div class="row"><h2 class="h2">Accounts</h2><span class="sub">As of Nov 17</span></div>
+<div class="line"><span>Checking</span><span style="font-weight: 600">$4,820</span></div>
+<div class="line"><span>High yield savings</span><span style="font-weight: 600">$19,200</span></div>
+<div class="line"><span>Brokerage and Roth IRA</span><span style="font-weight: 600">$25,760</span></div>
+<div class="line" style="border-bottom: none"><span>Credit card balance</span><span style="font-weight: 600">-$1,180</span></div>
+</section>
+<section class="card" aria-label="Upcoming bills">
+<div class="row"><h2 class="h2">Upcoming bills</h2><span class="sub">Next 14 days</span></div>
+<div class="line"><span>Credit card, Nov 25</span><span style="font-weight: 600">$1,180</span></div>
+<div class="line"><span>Phone, Nov 28</span><span style="font-weight: 600">$65</span></div>
+<div class="line"><span>Rent, Dec 1</span><span style="font-weight: 600">$1,950</span></div>
+<div class="line" style="border-bottom: none"><span>Class pack renewal, Dec 3</span><span style="font-weight: 600">$140</span></div>
+</section>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{v.finance_budget}}" hint-placeholder-val="{{ false }}">
+<div class="grid2">
+<section class="card" aria-label="Monthly budget">
+<div class="row"><h2 class="h2">November budget</h2><span class="sub">{{budgetSpentLabel}}</span></div>
+<sc-for list="{{budgetRows}}" as="br" hint-placeholder-count="6">
+<div class="goal"><div class="row"><span class="goal-t">{{br.label}}</span><span style="{{br.amtStyle}}">{{br.amt}}</span></div><div class="track"><div style="{{br.fillStyle}}"></div></div><sc-if value="{{br.hasNote}}" hint-placeholder-val="{{ false }}"><span class="sub">{{br.note}}</span></sc-if></div>
+</sc-for>
+</section>
+<section class="card" aria-label="Can I afford it">
+<h2 class="h2" style="font-size: 26px">Can I afford it?</h2>
+<p style="margin: 0; font-size: 14px; line-height: 1.5; color: #48443D">Type a price before you buy. It checks what is left this month and tells you which goal it would push back.</p>
+<label for="price" class="lbl">Purchase price</label>
+<div style="display: flex; align-items: center; gap: 8px; border: 1px solid #BDB2A0; border-radius: 12px; padding: 0 14px; min-height: 52px; background: #F3EEE6">
+<span style="font-size: 20px; color: #544F47">$</span>
+<input id="price" type="number" min="0" value="{{priceStr}}" onInput="{{onPrice}}" style="flex: 1; min-width: 0; border: none; background: transparent; font-size: 22px; font-weight: 600; color: #141B2C; outline: none">
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{presets}}" as="p" hint-placeholder-count="4">
+<button type="button" onClick="{{p.pick}}" style="min-height: 44px; border: 1px solid #BDB2A0; background: #F3EEE6; border-radius: 999px; padding: 8px 14px; font-size: 14px; color: #141B2C; cursor: pointer">{{p.label}}</button>
+</sc-for>
+</div>
+<div style="{{verdictBox}}">
+<span class="lbl">Verdict</span>
+<span style="font-family: Newsreader, Georgia, serif; font-size: 26px; font-weight: 500; line-height: 1.2">{{verdict}}</span>
+<span style="font-size: 14px; line-height: 1.5; color: #3A3630">{{detail}}</span>
+<span class="lbl" style="margin-top: 4px">Goal impact</span>
+<sc-for list="{{goalImpacts}}" as="gi" hint-placeholder-count="3">
+<div style="display: flex; justify-content: space-between; gap: 12px; background: #F3EEE6; border-radius: 8px; padding: 10px 12px; font-size: 14px"><span>{{gi.goal}}</span><span style="{{gi.style}}">{{gi.impact}}</span></div>
+</sc-for>
+</div>
+</section>
+</div>
+</sc-if>
+
+<sc-if value="{{v.finance_goals}}" hint-placeholder-val="{{ false }}">
+<div class="grid2">
+<section class="card" aria-label="Savings goals">
+<div class="row"><h2 class="h2">Savings goals</h2><span class="sub">Monthly contributions</span></div>
+<div class="goal"><div class="row"><span class="goal-t">Emergency fund, 6 months</span><span class="pct">64%</span></div><div class="track"><div class="fill" style="width: 64%"></div></div><span class="sub">$19,200 of $30,000 · $600 a month · on pace for Jun 2028</span></div>
+<div class="goal"><div class="row"><span class="goal-t">Roth IRA, 2026</span><span class="pct" style="color: #A4472B; font-weight: 600">Behind</span></div><div class="track"><div class="fill-warn" style="width: 55%"></div></div><span class="sub">$3,850 of $7,000 · needs $175 more a month by April</span></div>
+<div class="goal" style="border-bottom: none; padding-bottom: 0"><div class="row"><span class="goal-t">Trip funds, all trips</span><span class="pct">{{tripFundPct}}%</span></div><div class="track"><div class="fill" style="{{tripFundFill}}"></div></div><span class="sub">{{tripFundLabel}}</span></div>
+</section>
+<section class="card" aria-label="Long term roadmap">
+<div class="row"><h2 class="h2">Long term roadmap</h2><span class="sub">Next 5 years</span></div>
+<div style="display: flex; gap: 14px; padding: 12px 0; border-bottom: 1px solid #DCD3C4"><span style="width: 56px; flex: none; font-family: Newsreader, Georgia, serif; font-size: 18px">2027</span><div style="flex: 1; display: flex; flex-direction: column; gap: 4px"><strong style="font-size: 14px">Max out Roth IRA every year</strong><span class="sub">$7,000 a year</span></div><span class="tag t-money">Retire</span></div>
+<div style="display: flex; gap: 14px; padding: 12px 0; border-bottom: 1px solid #DCD3C4"><span style="width: 56px; flex: none; font-family: Newsreader, Georgia, serif; font-size: 18px">2028</span><div style="flex: 1; display: flex; flex-direction: column; gap: 4px"><strong style="font-size: 14px">Emergency fund at 6 months</strong><span class="sub">$30,000 target, 64% there</span></div><span class="tag t-money">Safety</span></div>
+<div style="display: flex; gap: 14px; padding: 12px 0; border-bottom: 1px solid #DCD3C4"><span style="width: 56px; flex: none; font-family: Newsreader, Georgia, serif; font-size: 18px">2028</span><div style="flex: 1; display: flex; flex-direction: column; gap: 4px"><strong style="font-size: 14px">Grad school fund</strong><span class="sub">[Set a target] · not started</span></div><span class="tag t-work">Growth</span></div>
+<div style="display: flex; gap: 14px; padding: 12px 0"><span style="width: 56px; flex: none; font-family: Newsreader, Georgia, serif; font-size: 18px">2031</span><div style="flex: 1; display: flex; flex-direction: column; gap: 4px"><strong style="font-size: 14px">Home down payment</strong><span class="sub">[Set a target] · not started</span></div><span class="tag t-social">Home</span></div>
+</section>
+</div>
+</sc-if>
+
+<sc-if value="{{v.finance_trips}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; flex-wrap: wrap; gap: 8px" role="group" aria-label="Choose a trip">
+<sc-for list="{{tripChips}}" as="tp" hint-placeholder-count="3">
+<button type="button" onClick="{{tp.pick}}" aria-pressed="{{tp.pressed}}" style="{{tp.style}}">{{tp.label}}</button>
+</sc-for>
+</div>
+<section class="card" aria-label="Trip budget planner" style="flex-direction: row; flex-wrap: wrap; gap: 24px">
+<div style="flex: 1 1 300px; display: flex; flex-direction: column; gap: 12px; min-width: 0">
+<span class="lbl">{{trip.status}} · linked to your vision board</span>
+<h2 class="h2" style="font-size: 28px">{{trip.name}}</h2>
+<label for="tripcost" class="lbl">Total trip cost</label>
+<div style="display: flex; align-items: center; gap: 8px; border: 1px solid #BDB2A0; border-radius: 12px; padding: 0 14px; min-height: 52px; background: #F3EEE6">
+<span style="font-size: 20px; color: #544F47">$</span>
+<input id="tripcost" type="number" min="0" value="{{tripCostStr}}" onInput="{{onTripCost}}" style="flex: 1; min-width: 0; border: none; background: transparent; font-size: 22px; font-weight: 600; color: #141B2C; outline: none">
+</div>
+<span class="lbl">Months until the trip</span>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{monthOpts}}" as="m" hint-placeholder-count="5">
+<button type="button" onClick="{{m.pick}}" aria-pressed="{{m.pressed}}" style="{{m.style}}">{{m.label}}</button>
+</sc-for>
+</div>
+<div class="goal" style="border: none"><div class="row"><span class="goal-t">Trip fund</span><span class="pct">{{tripSavedLabel}}</span></div><div class="track"><div class="fill" style="{{tripSavedFill}}"></div></div></div>
+</div>
+<div style="flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 10px">
+<div class="row"><span class="lbl">Set aside each month</span><span style="font-family: Newsreader, Georgia, serif; font-size: 30px; font-weight: 500">{{tripMonthly}}</span></div>
+<span class="lbl" style="margin-top: 4px">Where the money comes from</span>
+<sc-for list="{{cuts}}" as="c" hint-placeholder-count="5">
+<div style="{{c.rowStyle}}"><span style="display: flex; flex-direction: column; gap: 2px"><strong>{{c.label}}</strong><span class="sub">{{c.how}}</span></span><span style="font-weight: 600; white-space: nowrap">{{c.amt}}</span></div>
+</sc-for>
+<div style="{{tripBox}}"><strong>{{tripVerdict}}</strong> {{tripDetail}}</div>
+</div>
+</section>
+</div>
+</sc-if>
+
+<sc-if value="{{v.health_today}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 16px">
+<div class="grid2">
+<section class="card" aria-label="Body check">
+<span class="lbl">Recovery estimate · Apple Watch</span>
+<div style="display: flex; align-items: center; gap: 12px"><span style="font-family: Newsreader, Georgia, serif; font-size: 60px; font-weight: 500; line-height: 1">82</span><span class="tag t-health">Good</span></div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 18px">
+<div style="display: flex; flex-direction: column; gap: 4px"><span class="lbl" style="font-size: 10px">HRV vs baseline</span><span style="font-size: 14px; font-weight: 600">57 / 61 ms</span><div class="track"><div class="fill" style="width: 78%"></div></div></div>
+<div style="display: flex; flex-direction: column; gap: 4px"><span class="lbl" style="font-size: 10px">Resting HR</span><span style="font-size: 14px; font-weight: 600">58 bpm</span><div class="track"><div class="fill" style="width: 84%"></div></div></div>
+<div style="display: flex; flex-direction: column; gap: 4px"><span class="lbl" style="font-size: 10px">Sleep</span><span style="font-size: 14px; font-weight: 600">7h 40m</span><div class="track"><div class="fill" style="width: 88%"></div></div></div>
+<div style="display: flex; flex-direction: column; gap: 4px"><span class="lbl" style="font-size: 10px">Move ring</span><span style="font-size: 14px; font-weight: 600">410 / 500 cal</span><div class="track"><div class="fill" style="width: 82%"></div></div></div>
+<div style="display: flex; flex-direction: column; gap: 4px"><span class="lbl" style="font-size: 10px">Exercise ring</span><span style="font-size: 14px; font-weight: 600">22 / 30 min</span><div class="track"><div class="fill" style="width: 73%"></div></div></div>
+<div style="display: flex; flex-direction: column; gap: 4px"><span class="lbl" style="font-size: 10px">Stand ring</span><span style="font-size: 14px; font-weight: 600">9 / 12 hr</span><div class="track"><div class="fill" style="width: 75%"></div></div></div>
+</div>
+</section>
+<section class="card" aria-label="Today's call">
+<span class="lbl">Today's call</span>
+<h2 class="h2" style="font-size: 28px">Moderate day, keep Pilates</h2>
+<p style="margin: 0; font-size: 14px; line-height: 1.6; color: #48443D">HRV is a little under your baseline but sleep was solid, so tonight's reformer class is a good fit. Skip adding a strength session on top.</p>
+<div style="border-top: 1px solid #DCD3C4; padding-top: 12px; font-size: 13px; color: #48443D"><strong style="color: #141B2C">Close your rings:</strong> 8 more exercise minutes, which class will cover.</div>
+</section>
+</div>
+<section aria-label="Overnight numbers" class="stats">
+<div class="stat"><span class="lbl">Sleep last night</span><div><span class="num">7h 40m</span></div><span class="sub">Bed 11:20, up 7:05</span></div>
+<div class="stat"><span class="lbl">HRV</span><div><span class="num">57</span><span class="unit">ms</span></div><span class="sub">7 day avg 55</span></div>
+<div class="stat"><span class="lbl">Resting HR</span><div><span class="num">58</span><span class="unit">bpm</span></div><span class="sub">Down 2 this week</span></div>
+<div class="stat"><span class="lbl">Steps</span><div><span class="num">8.4</span><span class="unit">k</span></div><span class="sub">Goal 10k</span></div>
+</section>
+</div>
+</sc-if>
+
+<sc-if value="{{v.health_training}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 16px">
+<section aria-label="Class spending" class="stats">
+<div class="stat"><span class="lbl">Classes this month</span><span class="num">{{classCount}}</span><span class="sub">{{classMix}}</span></div>
+<div class="stat"><span class="lbl">Spent on classes</span><span class="num">{{classSpend}}</span><span class="sub">of your $250 fitness budget</span></div>
+<div class="stat"><span class="lbl">Cost per class</span><span class="num">{{classAvg}}</span><span class="sub">Average this month</span></div>
+<div class="stat"><span class="lbl">Best value</span><span class="num" style="font-size: 22px">{{bestValue}}</span><span class="sub">Highest rating per dollar</span></div>
+</section>
+<div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start">
+<section class="card" aria-label="Log a class" style="flex: 1 1 300px">
+<h2 class="h2">Log a class</h2>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+<div style="display: flex; flex-direction: column; gap: 6px"><label for="ctype" class="lbl">Type</label><select id="ctype" class="field" value="{{cForm.type}}" onChange="{{onCType}}"><option value="Pilates">Pilates</option><option value="HIIT">HIIT</option><option value="Gym">Gym</option><option value="Yoga">Yoga</option><option value="Spin">Spin</option><option value="Run">Run</option></select></div>
+<div style="display: flex; flex-direction: column; gap: 6px"><label for="cprice" class="lbl">Price</label><input id="cprice" type="number" min="0" class="field" value="{{cForm.price}}" onInput="{{onCPrice}}" placeholder="$"></div>
+</div>
+<label for="cname" class="lbl">Class</label>
+<input id="cname" type="text" class="field" value="{{cForm.name}}" onInput="{{onCName}}" placeholder="e.g. Reformer Flow">
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+<div style="display: flex; flex-direction: column; gap: 6px"><label for="cstudio" class="lbl">Studio</label><input id="cstudio" type="text" class="field" value="{{cForm.studio}}" onInput="{{onCStudio}}" placeholder="Studio"></div>
+<div style="display: flex; flex-direction: column; gap: 6px"><label for="cinst" class="lbl">Instructor</label><input id="cinst" type="text" class="field" value="{{cForm.instructor}}" onInput="{{onCInst}}" placeholder="Instructor"></div>
+</div>
+<span class="lbl">Rating</span>
+<div style="display: flex; gap: 2px">
+<sc-for list="{{cStars}}" as="s" hint-placeholder-count="5">
+<button type="button" onClick="{{s.pick}}" aria-label="{{s.aria}}" style="{{s.style}}">★</button>
+</sc-for>
+</div>
+<label for="cnotes" class="lbl">Thoughts on the class</label>
+<textarea id="cnotes" rows="3" class="area" value="{{cForm.notes}}" onInput="{{onCNotes}}" placeholder="How did it feel? Book this instructor again?"></textarea>
+<button type="button" class="btn" onClick="{{addClass}}">Save class</button>
+</section>
+<section class="card" aria-label="Past classes" style="flex: 999 1 520px">
+<div class="row" style="flex-wrap: wrap"><h2 class="h2">Past classes</h2></div>
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px">
+<div style="display: flex; flex-wrap: wrap; gap: 6px" role="group" aria-label="Filter by type">
+<sc-for list="{{cFilters}}" as="fl" hint-placeholder-count="7">
+<button type="button" onClick="{{fl.pick}}" aria-pressed="{{fl.pressed}}" style="{{fl.style}}">{{fl.label}}</button>
+</sc-for>
+</div>
+<div style="display: flex; gap: 6px" role="group" aria-label="Sort">
+<sc-for list="{{cSorts}}" as="so" hint-placeholder-count="3">
+<button type="button" onClick="{{so.pick}}" aria-pressed="{{so.pressed}}" style="{{so.style}}">{{so.label}}</button>
+</sc-for>
+</div>
+</div>
+<sc-for list="{{shownClasses}}" as="c" hint-placeholder-count="4">
+<div style="display: flex; gap: 14px; padding: 14px 0; border-bottom: 1px solid #DCD3C4">
+<div style="width: 46px; flex: none; display: flex; flex-direction: column; align-items: center; gap: 2px"><span class="lbl" style="font-size: 10px">Nov</span><span style="font-family: Newsreader, Georgia, serif; font-size: 22px">{{c.day}}</span></div>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px"><span class="tag t-health">{{c.type}}</span><strong style="font-size: 14px">{{c.name}}</strong><span style="margin-left: auto; letter-spacing: 2px; font-size: 14px"><span style="color: #1C2A47">{{c.on}}</span><span style="color: #BDB2A0">{{c.off}}</span></span></div>
+<span class="sub">{{c.meta}}</span>
+<p style="margin: 0; font-size: 14px; line-height: 1.5; color: #48443D">{{c.notes}}</p>
+</div>
+</div>
+</sc-for>
+<sc-if value="{{noClasses}}" hint-placeholder-val="{{ false }}"><span class="sub">No classes of this type yet.</span></sc-if>
+</section>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{v.health_routines}}" hint-placeholder-val="{{ false }}">
+<div class="grid2">
+<section class="card" aria-label="Supplement stack">
+<div class="row"><h2 class="h2">Supplement stack</h2><span class="sub">7 day streak</span></div>
+<div class="line"><span style="display: flex; flex-direction: column; gap: 2px"><strong>Vitamin D3 + K2</strong><span class="sub">With breakfast</span></span><span class="tag t-money">AM</span></div>
+<div class="line"><span style="display: flex; flex-direction: column; gap: 2px"><strong>Omega 3</strong><span class="sub">With breakfast</span></span><span class="tag t-money">AM</span></div>
+<div class="line"><span style="display: flex; flex-direction: column; gap: 2px"><strong>Iron</strong><span class="sub">Away from coffee</span></span><span class="tag t-money">Midday</span></div>
+<div class="line" style="border-bottom: none"><span style="display: flex; flex-direction: column; gap: 2px"><strong>Magnesium glycinate</strong><span class="sub">An hour before bed</span></span><span class="tag t-work">PM</span></div>
+</section>
+<section class="card" aria-label="Skincare routine">
+<div class="row"><h2 class="h2">Skincare</h2><span class="sub">Tonight: retinol night</span></div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 8px"><span class="lbl">Morning</span><span style="font-size: 14px">1. Gentle cleanser</span><span style="font-size: 14px">2. Vitamin C serum</span><span style="font-size: 14px">3. Moisturizer</span><span style="font-size: 14px">4. SPF 50</span></div>
+<div style="display: flex; flex-direction: column; gap: 8px"><span class="lbl">Evening</span><span style="font-size: 14px">1. Oil cleanse</span><span style="font-size: 14px">2. Gentle cleanser</span><span style="font-size: 14px">3. Retinol (M, W, F)</span><span style="font-size: 14px">4. Barrier cream</span></div>
+</div>
+<span class="sub">Both routines done 4 of the last 6 days</span>
+</section>
+<section class="card" aria-label="Daily habits">
+<div class="row"><h2 class="h2">Daily habits</h2><span class="sub">Last 7 days</span></div>
+<div class="goal"><div class="row"><span class="goal-t">Close all three rings</span><span class="pct">4 of 7</span></div><div class="track"><div class="fill" style="width: 57%"></div></div></div>
+<div class="goal"><div class="row"><span class="goal-t">10 minute stretch</span><span class="pct">5 of 7</span></div><div class="track"><div class="fill" style="width: 71%"></div></div></div>
+<div class="goal"><div class="row"><span class="goal-t">8 cups of water</span><span class="pct">4 of 7</span></div><div class="track"><div class="fill" style="width: 57%"></div></div></div>
+<div class="goal" style="border-bottom: none; padding-bottom: 0"><div class="row"><span class="goal-t">Screens off by 11</span><span class="pct">3 of 7</span></div><div class="track"><div class="fill-warn" style="width: 43%"></div></div></div>
+</section>
+<section class="card" aria-label="Wellness wishlist">
+<div class="row"><h2 class="h2">Self care to try</h2><span class="sub">Wishlist</span></div>
+<div class="line"><span>Facial before the holidays</span><span class="tag t-social">Book</span></div>
+<div class="line"><span>Reformer class pack</span><span class="tag t-health">Try</span></div>
+<div class="line"><span>Silk pillowcase</span><span class="tag t-money">Buy</span></div>
+<div class="line" style="border-bottom: none"><span>Annual physical</span><span class="tag t-work">Schedule</span></div>
+</section>
+</div>
+</sc-if>
+
+<sc-if value="{{v.social_board}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 12px">
+<h2 style="margin: 0; font-family: Newsreader, Georgia, serif; font-size: 32px; font-weight: 400; font-style: italic">2027 is for <span style="font-style: normal; font-weight: 500">more yeses</span></h2>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<label class="btn2" style="display: flex; align-items: center">Upload a photo<input type="file" accept="image/*" class="sr" onChange="{{onPhoto}}"></label>
+</div>
+</div>
+<div style="display: flex; gap: 8px">
+<label for="pinlink" class="sr">Paste a link to pin</label>
+<input id="pinlink" type="url" class="field" value="{{pinDraft}}" onInput="{{onPinDraft}}" placeholder="Paste a link to pin (a hotel, a dress, a place)">
+<button type="button" class="btn2" onClick="{{addPinLink}}">Pin</button>
+</div>
+<div class="masonry">
+<sc-for list="{{tripTiles}}" as="tt" hint-placeholder-count="3">
+<button type="button" onClick="{{tt.pick}}" style="{{tt.style}}">
+<span style="display: flex; justify-content: space-between; align-items: center; width: 100%"><span class="lbl" style="color: #CBBFA9">Travel</span><span class="tag" style="background: #E9E1D2; color: #0F1A2E">{{tt.status}}</span></span>
+<span style="display: flex; flex-direction: column; gap: 8px; width: 100%; text-align: left"><span style="font-family: Newsreader, Georgia, serif; font-size: 30px; font-weight: 500; line-height: 1.05; color: #FFFFFF">{{tt.name}}</span><span class="track" style="display: block; background: #2E4066"><span style="{{tt.fillStyle}}"></span></span><span style="font-size: 13px; color: #E9E1D2">{{tt.saved}} · Open trip planner</span></span>
+</button>
+</sc-for>
+
+<sc-for list="{{pins}}" as="pn" hint-placeholder-count="0">
+<div class="card" style="padding: 0; overflow: hidden; gap: 0">
+<sc-if value="{{pn.isPhoto}}" hint-placeholder-val="{{ false }}"><img src="{{pn.src}}" alt="Pinned photo" style="display: block; width: 100%; height: auto"></sc-if>
+<sc-if value="{{pn.isLink}}" hint-placeholder-val="{{ false }}"><a href="{{pn.url}}" target="_blank" rel="noopener" style="display: flex; flex-direction: column; gap: 6px; padding: 18px; text-decoration: none; color: #141B2C"><span class="lbl">Pinned link</span><span style="font-family: Newsreader, Georgia, serif; font-size: 20px">{{pn.title}}</span></a></sc-if>
+</div>
+</sc-for>
+
+<section class="card" aria-label="Restaurants">
+<div class="row"><h3 class="h2" style="font-size: 20px">Restaurants</h3><span class="lbl">NYC</span></div>
+<div style="display: flex; flex-wrap: wrap; gap: 6px" role="group" aria-label="Filter restaurants">
+<sc-for list="{{rFilters}}" as="rf" hint-placeholder-count="3">
+<button type="button" onClick="{{rf.pick}}" aria-pressed="{{rf.pressed}}" style="{{rf.style}}">{{rf.label}}</button>
+</sc-for>
+</div>
+<sc-for list="{{shownRestaurants}}" as="rs" hint-placeholder-count="5">
+<div style="display: flex; flex-direction: column; gap: 6px; padding: 10px 0; border-bottom: 1px solid #DCD3C4"><span style="font-size: 14px; font-weight: 600">{{rs.name}}</span><span style="display: flex; flex-wrap: wrap; gap: 6px"><span class="tag t-social">{{rs.cuisine}}</span><span class="tag t-plain">{{rs.hood}}</span><span class="tag t-work">{{rs.list}}</span></span></div>
+</sc-for>
+</section>
+
+<section class="card" aria-label="Shows and events">
+<div class="row"><h3 class="h2" style="font-size: 20px">Shows and events</h3><span class="lbl">Tickets</span></div>
+<div style="display: flex; border: 1px solid #CDC2B0; border-radius: 10px; overflow: hidden"><div style="width: 60px; flex: none; background: #0F1A2E; color: #FFFFFF; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 0"><span style="font-size: 11px; letter-spacing: .08em">DEC</span><span style="font-family: Newsreader, Georgia, serif; font-size: 24px">6</span></div><div style="padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; border-left: 2px dashed #BDB2A0"><strong style="font-size: 14px">Broadway musical</strong><span class="sub">Orchestra, row H</span></div></div>
+<div style="display: flex; border: 1px solid #CDC2B0; border-radius: 10px; overflow: hidden"><div style="width: 60px; flex: none; background: #0F1A2E; color: #FFFFFF; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 0"><span style="font-size: 11px; letter-spacing: .08em">DEC</span><span style="font-family: Newsreader, Georgia, serif; font-size: 24px">12</span></div><div style="padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; border-left: 2px dashed #BDB2A0"><strong style="font-size: 14px">Jazz night in the Village</strong><span class="sub">9:30 PM set</span></div></div>
+<label class="btn2" style="display: flex; align-items: center; justify-content: center">Upload a ticket<input type="file" accept="image/*,.pdf" class="sr"></label>
+</section>
+
+<div style="background: #0F1A2E; border-radius: 16px; padding: 26px 22px">
+<span class="chrome-text" style="font-family: Newsreader, Georgia, serif; font-style: italic; font-size: 26px; line-height: 1.3">"Say yes to the dinner, the trip and the last minute plan."</span>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{v.social_people}}" hint-placeholder-val="{{ false }}">
+<div class="grid2">
+<section class="card" aria-label="This week">
+<div class="row"><h2 class="h2">Plans this week</h2><span class="sub">From your calendar</span></div>
+<div class="line"><span>Sat brunch, college friends</span><span class="sub">11:00</span></div>
+<div class="line"><span>Sun call with family</span><span class="sub">5:00</span></div>
+<div class="line" style="border-bottom: none"><span>Thu book club</span><span class="sub">7:00</span></div>
+</section>
+<section class="card" aria-label="Reach out to">
+<div class="row"><h2 class="h2">Reach out to</h2><span class="sub">Longest gap first</span></div>
+<div class="line"><span>Former mentor</span><span class="sub">2 months</span></div>
+<div class="line"><span>Friend from home</span><span class="sub">6 weeks</span></div>
+<div class="line" style="border-bottom: none"><span>Cousin</span><span class="sub">4 weeks</span></div>
+</section>
+</div>
+</sc-if>
+
+<sc-if value="{{v.job_soon}}" hint-placeholder-val="{{ false }}">
+<section class="card" aria-label="Work coming soon" style="align-items: flex-start; padding: 32px">
+<span class="tag t-plain">Coming soon</span>
+<h2 class="h2" style="font-size: 30px">This page opens when you start</h2>
+<p style="margin: 0; font-size: 15px; line-height: 1.6; color: #48443D; max-width: 560px">Once you begin the new role, we will decide together what belongs here, such as weekly priorities, 1:1 notes, wins for reviews and learning goals.</p>
+</section>
+</sc-if>
+
+</div>
+</sc-if>
+
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1500}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    var saved = {};
+    try { saved = JSON.parse(window.localStorage.getItem('akosua_cc_v1') || '{}') || {}; } catch (e) { saved = {}; }
+    this.state = Object.assign({ tab: 'overview', sub: {}, period: 30, price: 350, query: '' }, saved);
+  }
+  componentDidMount() {
+    var self = this;
+    this._clock = setInterval(function () { self.setState({ now: Date.now() }); }, 30000);
+  }
+  componentWillUnmount() { clearInterval(this._clock); }
+  componentDidUpdate() {
+    var st = this.state;
+    var keep = { dump: st.dump, books: st.books, classes: st.classes, myPrios: st.myPrios, pins: st.pins, trips: st.trips, ratings: st.ratings };
+    try { window.localStorage.setItem('akosua_cc_v1', JSON.stringify(keep)); } catch (e) {}
+  }
+  renderVals() {
+    var self = this;
+    var st = this.state;
+    var tab = st.tab;
+    var fmt = function (n) { return (n < 0 ? '-$' : '$') + Math.abs(Math.round(n)).toLocaleString('en-US'); };
+    var chip = function (on) {
+      return 'min-height: 38px; padding: 6px 13px; border-radius: 999px; font-size: 13px; cursor: pointer; ' + (on ? 'background: #0F1A2E; color: #FFFFFF; border: 1px solid #0F1A2E' : 'background: #F3EEE6; color: #141B2C; border: 1px solid #BDB2A0');
+    };
+    var starBtn = function (on, size) {
+      return 'width: 44px; height: 44px; border: none; background: transparent; font-size: ' + (size || 26) + 'px; cursor: pointer; padding: 0; color: ' + (on ? '#1C2A47' : '#BDB2A0');
+    };
+
+    var subDefs = {
+      overview: [['today', 'Today'], ['goals', 'Goals and life areas']],
+      dump: [['all', 'Everything'], ['books', 'Bookshelf']],
+      finance: [['overview', 'Overview'], ['budget', 'Monthly budget'], ['goals', 'Long term goals'], ['trips', 'Trip planner']],
+      health: [['today', 'Today'], ['training', 'Classes'], ['routines', 'Routines']],
+      social: [['board', 'Vision board'], ['people', 'People and plans']],
+      job: [['soon', 'Coming soon']]
+    };
+    var subMap = st.sub || {};
+    var curSub = subMap[tab] || subDefs[tab][0][0];
+    var go = function (t, sb, extra) { var m = Object.assign({}, self.state.sub || {}); if (sb) m[t] = sb; self.setState(Object.assign({ tab: t, sub: m, query: '' }, extra || {})); };
+    var subs = subDefs[tab].map(function (d) {
+      var on = d[0] === curSub;
+      return { label: d[1], pressed: on ? 'true' : 'false', pick: function () { go(tab, d[0]); },
+        style: 'min-height: 44px; padding: 10px 14px; margin-bottom: -1px; background: transparent; border: none; border-bottom: 2px solid ' + (on ? '#0F1A2E' : 'transparent') + '; font-size: 14px; white-space: nowrap; font-weight: ' + (on ? '600' : '500') + '; color: ' + (on ? '#141B2C' : '#544F47') + '; cursor: pointer' };
+    });
+    var v = {}; v[tab + '_' + curSub] = true;
+
+    var navIds = ['overview', 'dump', 'finance', 'health', 'social', 'job'];
+    var nav = {};
+    navIds.forEach(function (id) {
+      var on = id === tab;
+      nav[id] = { pressed: on ? 'true' : 'false', pick: function () { go(id); },
+        style: on ? 'background: #E9E1D2; color: #0F1A2E; border-color: #AEB6C2; font-weight: 600' : '' };
+    });
+
+    var banners = {
+      overview: ['HOME', 'your day at a glance'], dump: ['DUMP', 'learnings, think pieces, films and books'],
+      finance: ['MONEY', 'budget, goals and every purchase'], health: ['HEALTH', 'body, classes and routines'],
+      social: ['SOCIAL', 'people, places and plans'], job: ['WORK', 'opens when you start']
+    };
+
+    var period = st.period || 30;
+    var mult = period === 7 ? 0.35 : period === 90 ? 1.9 : 1;
+    var periods = [7, 30, 90].map(function (n) {
+      return { label: n + ' days', pressed: n === period ? 'true' : 'false', style: chip(n === period), pick: function () { self.setState({ period: n }); } };
+    });
+    var trendDefs = {
+      overview: [['Life score', 3.8, 'score change', true, true, 12.0, 'habits completed', true, true, '82 of 100'], ['Goals', 9.5, 'progress gained', true, true, 4.0, 'steps late', true, false, '3 of 4 on track'], ['Balance', 6.1, 'time for yourself', true, true, 8.3, 'screen time', false, true, '2 free evenings']],
+      dump: [['Learning', 60.0, 'items dumped', true, true, 25.0, 'thoughts added', true, true, '11 this month'], ['Reading', 50.0, 'pages read', true, true, 1.0, 'books finished', true, true, '2 books this month'], ['Watching', 20.0, 'films and shows', true, true, 10.0, 'unwatched list', false, true, '3 to watch']],
+      finance: [['Savings', 12.4, 'saved vs prior period', true, true, 6.2, 'total spending', false, true, '22% savings rate'], ['Net worth', 4.1, 'net worth growth', true, true, 3.2, 'investments', true, true, '$48,600'], ['Spending', 6.2, 'total spending', false, true, 5.0, 'dining out', true, false, '$3,860 of $5,100']],
+      health: [['Sleep', 4.6, 'avg duration', true, true, 2.1, 'bedtime consistency', false, false, '7h 22m average'], ['Training', 25.0, 'workouts', true, true, 8.0, 'cost per class', false, true, '13 classes logged'], ['Recovery', 3.3, 'HRV', false, false, 2.4, 'resting heart rate', false, true, 'HRV 57 ms']],
+      social: [['Connection', 50.0, 'friends seen', true, true, 20.0, 'plans made', true, true, '6 plans this month'], ['Experiences', 33.3, 'new restaurants', true, true, 15.0, 'going out spend', true, false, '4 new spots'], ['Reach outs', 25.0, 'gaps past 30 days', false, true, 10.0, 'family calls', true, true, '3 people to text']]
+    };
+    var pStyle = function (good, big) { return 'font-family: Newsreader, Georgia, serif; font-weight: 500; line-height: 1; font-size: ' + (big ? '32px' : '22px') + '; color: ' + (good ? '#556233' : '#A4472B'); };
+    var trendCards = (trendDefs[tab] || []).map(function (d) {
+      return { area: d[0], p1: (d[3] ? '↗ ' : '↘ ') + (d[1] * mult).toFixed(1) + '%', p1Label: d[2], p1Style: pStyle(d[4], true),
+        p2: (d[7] ? '↗ ' : '↘ ') + (d[5] * mult).toFixed(1) + '%', p2Label: d[6], p2Style: pStyle(d[8], false), foot: d[9] };
+    });
+    var showTrend = !!trendDefs[tab] && curSub === subDefs[tab][0][0];
+
+    // clock
+    var now = st.now ? new Date(st.now) : new Date();
+    var clockH = String(now.getHours() % 12 || 12).padStart(2, '0');
+    var clockM = String(now.getMinutes()).padStart(2, '0');
+    var clockAmPm = now.getHours() < 12 ? 'AM' : 'PM';
+    var clockDay = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][now.getDay()];
+
+    // trips
+    var trips = st.trips || [
+      { id: 'lisbon', name: 'Lisbon and Porto', cost: 2400, months: 5, saved: 960, status: 'Booked' },
+      { id: 'tokyo', name: 'Tokyo in cherry blossom season', cost: 4500, months: 16, saved: 1350, status: 'Dreaming' },
+      { id: 'beach', name: 'Beach week with the group chat', cost: 1500, months: 8, saved: 0, status: 'Planning' }
+    ];
+    var tripSel = st.tripSel || trips[0].id;
+    var trip = trips.filter(function (t) { return t.id === tripSel; })[0] || trips[0];
+    var updTrip = function (patch) {
+      var list = (self.state.trips || trips).map(function (t) { return t.id === trip.id ? Object.assign({}, t, patch) : t; });
+      self.setState({ trips: list });
+    };
+    var tripChips = trips.map(function (t) {
+      return { label: t.name, pressed: t.id === trip.id ? 'true' : 'false', style: chip(t.id === trip.id), pick: function () { self.setState({ tripSel: t.id }); } };
+    });
+    var monthOpts = [3, 5, 8, 12, 16].map(function (m) {
+      return { label: m + ' mo', pressed: m === trip.months ? 'true' : 'false', style: chip(m === trip.months), pick: function () { updTrip({ months: m }); } };
+    });
+    var remainingCost = Math.max(0, trip.cost - trip.saved);
+    var need = remainingCost / (trip.months || 1);
+    var cutDefs = [['Unused subscriptions', 'Cancel 3 not opened in 60 days', 34], ['Dining out', 'From $420 to $300, two fewer dinners', 120], ['Shopping', 'Pause non essentials until the trip', 150], ['Coffee and takeout', 'Make coffee at home on weekdays', 60], ['Rideshare', 'Subway for evening plans', 40]];
+    var remaining = need, covered = 0;
+    var cuts = cutDefs.map(function (d) {
+      var used = remaining > 0.5; var take = used ? Math.min(d[2], remaining) : 0; remaining -= take; covered += take;
+      return { label: d[0], how: d[1], amt: used ? fmt(take) + ' / mo' : 'Not needed',
+        rowStyle: 'display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #DCD3C4; font-size: 14px; ' + (used ? 'color: #141B2C' : 'color: #544F47; opacity: 0.6') };
+    });
+    var gap = Math.max(0, need - covered);
+    var tripBase = 'border-radius: 10px; padding: 12px 14px; font-size: 14px; line-height: 1.5; color: #2E2A24; ';
+    var tripVerdict, tripDetail, tripBox;
+    if (gap < 1) { tripVerdict = 'Covered without touching savings.'; tripDetail = 'Set up an auto transfer of ' + fmt(need) + ' to this trip fund on payday.'; tripBox = tripBase + 'background: #E6E8D8'; }
+    else { tripVerdict = 'Short ' + fmt(gap) + ' a month.'; tripDetail = 'Trims cover ' + fmt(covered) + '. Giving it ' + Math.ceil(remainingCost / 404) + ' or more months closes the gap.'; tripBox = tripBase + 'background: #F3E1D6'; }
+    var tripPct = trip.cost ? Math.round(trip.saved / trip.cost * 100) : 0;
+    var tripTiles = trips.map(function (t) {
+      var pct = t.cost ? Math.round(t.saved / t.cost * 100) : 0;
+      return { name: t.name, status: t.status, saved: pct + '% saved', fillStyle: 'display: block; height: 5px; border-radius: 3px; background: #BDB2A0; width: ' + pct + '%',
+        pick: function () { go('finance', 'trips', { tripSel: t.id }); },
+        style: 'width: 100%; min-height: ' + (t.id === 'lisbon' ? 240 : 190) + 'px; border: none; border-radius: 16px; background: #0F1A2E; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; gap: 16px; cursor: pointer; box-shadow: inset 0 0 0 1px #2E4066' };
+    });
+    var allSaved = trips.reduce(function (a, t) { return a + t.saved; }, 0), allCost = trips.reduce(function (a, t) { return a + t.cost; }, 0);
+    var tripFundPct = allCost ? Math.round(allSaved / allCost * 100) : 0;
+
+    // classes
+    var classes = st.classes || [
+      { id: 5, d: 20, type: 'Pilates', name: 'Reformer Flow', studio: 'Chelsea studio', instructor: 'Maya', price: 38, rating: 5, notes: 'Best class this month. Great form cues and my core was shaking by the end. Book her again.' },
+      { id: 4, d: 18, type: 'HIIT', name: 'Tread and Floor', studio: 'Flatiron', instructor: 'Jordan', price: 34, rating: 4, notes: 'Hard in a good way. Room was too crowded for the floor block.' },
+      { id: 3, d: 16, type: 'Gym', name: 'Lower body strength', studio: 'Home gym', instructor: 'Self', price: 0, rating: 4, notes: 'New deadlift PR. Warm up hips longer next time.' },
+      { id: 2, d: 13, type: 'Yoga', name: 'Hot vinyasa', studio: 'Williamsburg', instructor: 'Priya', price: 30, rating: 3, notes: 'Too hot after a long workday. Try the 7 AM slot.' },
+      { id: 1, d: 11, type: 'Spin', name: 'Rhythm ride', studio: 'Soho', instructor: 'Andre', price: 36, rating: 5, notes: 'So fun. Bring a friend next time.' }
+    ];
+    var cForm = st.cForm || { type: 'Pilates', name: '', studio: '', instructor: '', price: '', notes: '', rating: 0 };
+    var setC = function (p) { self.setState({ cForm: Object.assign({}, self.state.cForm || cForm, p) }); };
+    var cStars = [1, 2, 3, 4, 5].map(function (n) { return { aria: n + ' star' + (n > 1 ? 's' : ''), pick: function () { setC({ rating: n }); }, style: starBtn(n <= cForm.rating, 28) }; });
+    var cFilter = st.cFilter || 'All', cSort = st.cSort || 'newest';
+    var cFilters = ['All', 'Pilates', 'HIIT', 'Gym', 'Yoga', 'Spin', 'Run'].map(function (f) { return { label: f, pressed: f === cFilter ? 'true' : 'false', style: chip(f === cFilter), pick: function () { self.setState({ cFilter: f }); } }; });
+    var cSorts = [['newest', 'Newest'], ['rating', 'Top rated'], ['price', 'Price']].map(function (s) { return { label: s[1], pressed: s[0] === cSort ? 'true' : 'false', style: chip(s[0] === cSort), pick: function () { self.setState({ cSort: s[0] }); } }; });
+    var shownC = classes.filter(function (c) { return cFilter === 'All' || c.type === cFilter; }).slice();
+    shownC.sort(function (a, b) { return cSort === 'rating' ? (b.rating - a.rating) || (b.id - a.id) : cSort === 'price' ? (b.price - a.price) : b.id - a.id; });
+    var shownClasses = shownC.map(function (c) {
+      return { day: String(c.d), type: c.type, name: c.name, notes: c.notes, on: '★★★★★'.slice(0, c.rating), off: '★★★★★'.slice(c.rating),
+        meta: [c.studio, c.instructor ? 'with ' + c.instructor : '', c.price ? fmt(c.price) : 'Free'].filter(Boolean).join(' · ') };
+    });
+    var spend = classes.reduce(function (a, c) { return a + (Number(c.price) || 0); }, 0);
+    var paid = classes.filter(function (c) { return Number(c.price) > 0; });
+    var counts = {}; classes.forEach(function (c) { counts[c.type] = (counts[c.type] || 0) + 1; });
+    var best = paid.slice().sort(function (a, b) { return (b.rating / b.price) - (a.rating / a.price); })[0];
+    var addClass = function () {
+      var f = self.state.cForm || cForm; if (!f.name && !f.notes) return;
+      var list = (self.state.classes || classes).slice();
+      var id = list.reduce(function (m, c) { return Math.max(m, c.id); }, 0) + 1;
+      list.push({ id: id, d: new Date().getDate(), type: f.type, name: f.name || f.type + ' class', studio: f.studio, instructor: f.instructor, price: Number(f.price) || 0, rating: f.rating || 3, notes: f.notes });
+      self.setState({ classes: list, cForm: { type: f.type, name: '', studio: '', instructor: '', price: '', notes: '', rating: 0 } });
+    };
+
+    // budget
+    var budgetDefs = [['Rent and utilities', 2150, 2150], ['Groceries', 310, 450], ['Dining out', 420, 400], ['Shopping', 380, 600], ['Fitness classes', spend, 250], ['Subscriptions', 95, 120], ['Transportation', 140, 250]];
+    var bSpent = 0, bTotal = 0;
+    var budgetRows = budgetDefs.map(function (d) {
+      bSpent += d[1]; bTotal += d[2]; var over = d[1] > d[2]; var pct = Math.min(100, Math.round(d[1] / d[2] * 100));
+      return { label: d[0], amt: fmt(d[1]) + ' / ' + fmt(d[2]), amtStyle: 'font-size: 12px; ' + (over ? 'color: #A4472B; font-weight: 600' : 'color: #544F47'),
+        fillStyle: 'height: 5px; border-radius: 3px; width: ' + pct + '%; background: ' + (over ? '#A4472B' : '#1C2A47'),
+        hasNote: d[0] === 'Fitness classes', note: 'Pulled from your class log, ' + classes.length + ' classes' };
+    });
+
+    // afford
+    var price = Number(st.price) || 0, left = 1240;
+    var after = left - price;
+    var goalsForImpact = [['Emergency fund', 600], ['Lisbon trip fund', Math.max(1, Math.round(Math.max(0, 2400 - 960) / 5))], ['Roth IRA', 400]];
+    var base = 'border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 8px; ';
+    var verdict, detail, box, goalImpacts;
+    if (price <= left) {
+      verdict = price <= left * 0.4 ? 'Go for it' : 'Fits, but tightens the month';
+      detail = price <= left * 0.4 ? 'This fits in what is left this month with room for the remaining 10 days.' : 'You can cover it without touching savings, but you would have about ' + fmt(after / 10) + ' a day left.';
+      box = base + (price <= left * 0.4 ? 'background: #E6E8D8' : 'background: #EFE6D4');
+      goalImpacts = goalsForImpact.map(function (g) { return { goal: g[0], impact: 'No delay', style: 'font-weight: 600; color: #556233' }; });
+    } else {
+      var over = price - left;
+      var rows = goalsForImpact.map(function (g) { return { g: g[0], w: Math.max(1, Math.ceil(over / g[1] * 4.33)) }; });
+      var least = rows.slice().sort(function (a, b) { return a.w - b.w; })[0];
+      verdict = 'Wait, or plan for it';
+      detail = 'This is ' + fmt(over) + ' over your spending room, so it would come out of a goal. Least disruptive: ' + least.g + ', about ' + least.w + ' weeks.';
+      box = base + 'background: #F3E1D6';
+      goalImpacts = rows.map(function (r) { return { goal: 'If it comes from ' + r.g, impact: '+' + r.w + ' weeks', style: 'font-weight: 600; color: #A4472B' }; });
+    }
+    var presets = [80, 350, 900, 2400].map(function (n) { return { label: '$' + n.toLocaleString('en-US'), pick: function () { self.setState({ price: n }); } }; });
+
+    // dump
+    var typeClass = { Article: 't-learn', 'Think piece': 't-work', Substack: 't-money', Perspective: 't-social', Film: 't-health', 'TV show': 't-health', Book: 't-plain' };
+    var dump = st.dump || [
+      { id: 6, type: 'Substack', title: 'Why the best operators write everything down', source: 'substack.com', url: '#', date: 'Nov 19', note: 'Start a weekly decision log in the new role.', rating: 0, comments: [] },
+      { id: 5, type: 'Film', title: 'A documentary on the people behind a big health tech scandal', source: 'Streaming', url: '#', date: 'Nov 17', note: 'Pairs with Bad Blood.', rating: 4, comments: [] },
+      { id: 4, type: 'Article', title: 'What ambient AI scribes are changing about the doctor visit', source: 'Healthcare newsletter', url: '#', date: 'Nov 15', note: 'Adoption depends on whether clinicians trust the summaries.', rating: 0, comments: [{ text: 'Ask a friend in primary care how her clinic is rolling this out.', date: 'Nov 16' }] },
+      { id: 3, type: 'Think piece', title: 'The case for spending lavishly on one thing', source: 'Personal finance blog', url: '#', date: 'Nov 12', note: 'Mine is travel. Cut everywhere else.', rating: 0, comments: [] },
+      { id: 2, type: 'TV show', title: 'A slow burn workplace drama everyone is talking about', source: 'Streaming', url: '#', date: 'Nov 9', note: '', rating: 5, comments: [] },
+      { id: 1, type: 'Perspective', title: 'A founder on building care for patients who are usually overlooked', source: 'Podcast notes', url: '#', date: 'Nov 4', note: 'Reminded me why I care about access.', rating: 0, comments: [] }
+    ];
+    var dForm = st.dForm || { url: '', type: 'Article', title: '', note: '' };
+    var setD = function (p) { self.setState({ dForm: Object.assign({}, self.state.dForm || dForm, p) }); };
+    var dFilter = st.dFilter || 'All';
+    var dTypes = ['All', 'Article', 'Think piece', 'Substack', 'Perspective', 'Film', 'TV show'];
+    var dFilters = dTypes.map(function (f) { return { label: f === 'All' ? 'All' : f + 's', pressed: f === dFilter ? 'true' : 'false', style: chip(f === dFilter), pick: function () { self.setState({ dFilter: f }); } }; });
+    var updDump = function (id, fn) { self.setState({ dump: (self.state.dump || dump).map(function (x) { return x.id === id ? fn(x) : x; }) }); };
+    var drafts = st.drafts || {};
+    var shownDump = dump.filter(function (d) { return dFilter === 'All' || d.type === dFilter; }).map(function (d) {
+      return { type: d.type, title: d.title, source: d.source, url: d.url || '#', date: d.date, note: d.note, hasNote: !!d.note, tagClass: 'tag ' + (typeClass[d.type] || 't-plain'),
+        stars: [1, 2, 3, 4, 5].map(function (n) { return { aria: 'Rate ' + n, style: starBtn(n <= (d.rating || 0), 20).replace('width: 44px; height: 44px', 'width: 32px; height: 36px'), pick: function () { updDump(d.id, function (x) { return Object.assign({}, x, { rating: n }); }); } }; }),
+        comments: d.comments || [], inputId: 'cm' + d.id, draft: drafts[d.id] || '',
+        onDraft: function (e) { var dr = Object.assign({}, self.state.drafts || {}); dr[d.id] = e.target.value; self.setState({ drafts: dr }); },
+        addComment: function () {
+          var text = ((self.state.drafts || {})[d.id] || '').trim(); if (!text) return;
+          var dt = new Date(); var lab = dt.toLocaleString('en-US', { month: 'short' }) + ' ' + dt.getDate();
+          updDump(d.id, function (x) { return Object.assign({}, x, { comments: (x.comments || []).concat([{ text: text, date: lab }]) }); });
+          var dr = Object.assign({}, self.state.drafts || {}); dr[d.id] = ''; self.setState({ drafts: dr });
+        } };
+    });
+    var hostOf = function (u) { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return 'Link'; } };
+    var titleFrom = function (u) {
+      try { var p = new URL(u).pathname.split('/').filter(Boolean).pop() || ''; p = decodeURIComponent(p).replace(/[-_]+/g, ' ').replace(/\.\w+$/, '').trim(); return p ? p.charAt(0).toUpperCase() + p.slice(1) : hostOf(u); } catch (e) { return u || 'Untitled'; }
+    };
+    var addDump = function () {
+      var f = self.state.dForm || dForm; if (!f.url && !f.title) return;
+      var list = (self.state.dump || dump).slice(); var id = list.reduce(function (m, x) { return Math.max(m, x.id); }, 0) + 1;
+      var dt = new Date();
+      list.unshift({ id: id, type: f.type, title: f.title || titleFrom(f.url), source: f.url ? hostOf(f.url) : 'Note', url: f.url || '#', date: dt.toLocaleString('en-US', { month: 'short' }) + ' ' + dt.getDate(), note: f.note, rating: 0, comments: [] });
+      self.setState({ dump: list, dForm: { url: '', type: f.type, title: '', note: '' } });
+    };
+    var recentDump = dump.slice(0, 3).map(function (d) { return { type: d.type, title: d.title, tagClass: 'tag ' + (typeClass[d.type] || 't-plain'), pick: function () { go('dump', 'all'); } }; });
+
+    // books
+    var books = st.books || [
+      { id: 7, title: 'Bad Blood', author: 'John Carreyrou', status: 'Read', stars: 5, review: 'Read it in two sittings. A lesson in what happens when nobody is allowed to ask hard questions.' },
+      { id: 6, title: 'The Psychology of Money', author: 'Morgan Housel', status: 'Read', stars: 4, review: 'Short chapters, big ideas. The bit about enough stuck with me most.' },
+      { id: 5, title: 'Tomorrow, and Tomorrow, and Tomorrow', author: 'Gabrielle Zevin', status: 'Reading', stars: 0, review: 'Halfway through and loving the friendship at the center of it.' },
+      { id: 4, title: 'Atomic Habits', author: 'James Clear', status: 'Want to read', stars: 0, review: 'Recommended by three friends this year.' }
+    ];
+    var bForm = st.bForm || { title: '', author: '', status: 'Read', stars: 0, review: '' };
+    var setB = function (p) { self.setState({ bForm: Object.assign({}, self.state.bForm || bForm, p) }); };
+    var bStars = [1, 2, 3, 4, 5].map(function (n) { return { aria: n + ' star' + (n > 1 ? 's' : ''), pick: function () { setB({ stars: n }); }, style: starBtn(n <= bForm.stars, 28) }; });
+    var bFilter = st.bFilter || 'All';
+    var bFilters = ['All', 'Read', 'Reading', 'Want to read'].map(function (f) { return { label: f, pressed: f === bFilter ? 'true' : 'false', style: chip(f === bFilter), pick: function () { self.setState({ bFilter: f }); } }; });
+    var covers = ['#0F1A2E', '#6B4A33', '#556233', '#1C2A47', '#8A6A4A'];
+    var shownBooks = books.filter(function (b) { return bFilter === 'All' || b.status === bFilter; }).map(function (b) {
+      return { title: b.title, author: b.author, status: b.status === 'Reading' ? 'Currently reading' : b.status, review: b.review, on: '★★★★★'.slice(0, b.stars), off: b.stars ? '★★★★★'.slice(b.stars) : '',
+        coverStyle: 'width: 68px; height: 100px; flex: none; border-radius: 3px 8px 8px 3px; padding: 8px; box-sizing: border-box; display: flex; align-items: flex-end; overflow: hidden; box-shadow: inset 5px 0 0 #AEB6C2; background: ' + covers[b.id % covers.length] };
+    });
+    var readCount = books.filter(function (b) { return b.status === 'Read'; }).length;
+    var monthsLeft = 12 - now.getMonth() - 1 + 1;
+    var readPace = readCount >= 20 ? 'Goal reached. Keep going.' : (20 - readCount) + ' to go this year';
+    var goalSpines = []; for (var gi2 = 0; gi2 < 20; gi2++) { goalSpines.push({ style: 'display: block; height: 34px; border-radius: 3px; ' + (gi2 < readCount ? 'background: #0F1A2E; box-shadow: inset 3px 0 0 #AEB6C2' : 'background: #D6CCBC') }); }
+    var addBook = function () {
+      var f = self.state.bForm || bForm; if (!f.title) return;
+      var list = (self.state.books || books).slice(); var id = list.reduce(function (m, x) { return Math.max(m, x.id); }, 0) + 1;
+      list.unshift({ id: id, title: f.title, author: f.author || 'Unknown author', status: f.status, stars: f.stars, review: f.review || 'No review yet.' });
+      self.setState({ books: list, bForm: { title: '', author: '', status: 'Read', stars: 0, review: '' } });
+    };
+
+    // priorities
+    var calPriorities = [{ time: '7:00', text: 'Reformer Pilates' }, { time: 'Sat', text: 'Brunch with college friends' }];
+    var myPrios = st.myPrios || [{ text: 'Move $288 to the Lisbon fund', done: false }, { text: 'Text a former mentor', done: true }];
+    var myPriorities = myPrios.map(function (p, i) {
+      return { text: p.text, done: p.done ? 'true' : 'false',
+        toggle: function () { var l = (self.state.myPrios || myPrios).slice(); l[i] = Object.assign({}, l[i], { done: !l[i].done }); self.setState({ myPrios: l }); },
+        boxStyle: 'width: 16px; height: 16px; flex: none; border-radius: 4px; box-sizing: border-box; ' + (p.done ? 'background: #0F1A2E; border: 1px solid #0F1A2E' : 'background: #F3EEE6; border: 1px solid #8A93A0'),
+        textStyle: 'flex: 1; font-size: 14px; ' + (p.done ? 'text-decoration: line-through; color: #544F47' : 'color: #141B2C') };
+    });
+    var addPriority = function () { var t = (self.state.prioDraft || '').trim(); if (!t) return; self.setState({ myPrios: (self.state.myPrios || myPrios).concat([{ text: t, done: false }]), prioDraft: '' }); };
+
+    // pins
+    var pins = (st.pins || []).map(function (p) { return { isPhoto: p.kind === 'photo', isLink: p.kind === 'link', src: p.src, url: p.url, title: p.title }; });
+    var onPhoto = function (e) {
+      var file = e.target.files && e.target.files[0]; if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function () {
+        var img = new Image();
+        img.onload = function () {
+          var scale = Math.min(1, 640 / img.width); var c = document.createElement('canvas');
+          c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+          c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+          var src = c.toDataURL('image/jpeg', 0.72);
+          self.setState({ pins: [{ kind: 'photo', src: src }].concat(self.state.pins || []) });
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    };
+    var addPinLink = function () { var u = (self.state.pinDraft || '').trim(); if (!u) return; self.setState({ pins: [{ kind: 'link', url: u, title: titleFrom(u) }].concat(self.state.pins || []), pinDraft: '' }); };
+
+    // restaurants
+    var restaurants = [
+      { name: 'Omakase counter', cuisine: 'Japanese', hood: 'East Village', list: 'Want to try' },
+      { name: 'West African spot', cuisine: 'West African', hood: 'Harlem', list: 'Want to try' },
+      { name: 'Natural wine bar', cuisine: 'Wine bar', hood: 'Fort Greene', list: 'Want to try' },
+      { name: 'Handmade pasta place', cuisine: 'Italian', hood: 'West Village', list: 'Been, loved it' },
+      { name: 'Weekend brunch spot', cuisine: 'Brunch', hood: 'Williamsburg', list: 'Been, loved it' }
+    ];
+    var rFilter = st.rFilter || 'All';
+    var rFilters = ['All', 'Want to try', 'Been, loved it'].map(function (f) { return { label: f, pressed: f === rFilter ? 'true' : 'false', style: chip(f === rFilter), pick: function () { self.setState({ rFilter: f }); } }; });
+    var shownRestaurants = restaurants.filter(function (r) { return rFilter === 'All' || r.list === rFilter; });
+
+    // goals + areas
+    var goalCards = [
+      { title: 'Build an emergency fund', area: 'Money', tagClass: 'tag t-money', horizon: 'Long term', when: 'Due Jun 30, 2028', pct: 64, steps: '14 of 22 action steps done', t: 'finance', s: 'goals' },
+      { title: 'Fully fund the Lisbon trip', area: 'Experiences', tagClass: 'tag t-social', horizon: 'Short term', when: 'Due Apr 10, 2027', pct: tripPct, steps: fmt(trip.saved) + ' saved', t: 'finance', s: 'trips' },
+      { title: 'Strength train 3x a week', area: 'Health', tagClass: 'tag t-health', horizon: 'Habit', when: 'Through Dec 31', pct: 75, steps: '9 of 12 sessions this month', t: 'health', s: 'training' },
+      { title: 'Read 20 books this year', area: 'Learning', tagClass: 'tag t-learn', horizon: 'This year', when: 'Due Dec 31', pct: Math.round(readCount / 20 * 100), steps: readCount + ' of 20 read', t: 'dump', s: 'books' }
+    ].map(function (g) { return Object.assign({}, g, { fillStyle: 'width: ' + g.pct + '%' }); });
+    var areaDefs = [['finance', 'Money', 78, 'Dining is $20 over budget'], ['health', 'Health', 86, 'Sleep trending up'], ['social', 'Social', 84, '3 friends seen this week'], ['dump', 'Learning', 80, readCount + ' of 20 books read']];
+    var areas = areaDefs.map(function (d) { return { label: d[1], score: d[2] + '/100', note: d[3], fillStyle: 'display: block; width: ' + d[2] + '%', pick: function () { go(d[0]); } }; });
+    var arches = [
+      { label: 'Monthly budget', stat: '$1,240', pick: function () { go('finance', 'budget'); } },
+      { label: 'Lisbon fund', stat: tripPct + '%', pick: function () { go('finance', 'trips', { tripSel: 'lisbon' }); } },
+      { label: 'Classes', stat: String(classes.length), pick: function () { go('health', 'training'); } },
+      { label: 'Bookshelf', stat: readCount + '/20', pick: function () { go('dump', 'books'); } }
+    ];
+
+    // search
+    var q = (st.query || '').trim().toLowerCase();
+    var results = [];
+    if (q) {
+      dump.forEach(function (d) { if ((d.title + ' ' + d.note + ' ' + d.type).toLowerCase().indexOf(q) > -1) results.push({ kind: d.type, title: d.title, where: 'Dump', tagClass: 'tag ' + (typeClass[d.type] || 't-plain'), pick: function () { go('dump', 'all'); } }); });
+      books.forEach(function (b) { if ((b.title + ' ' + b.author + ' ' + b.review).toLowerCase().indexOf(q) > -1) results.push({ kind: 'Book', title: b.title, where: 'Bookshelf', tagClass: 'tag t-plain', pick: function () { go('dump', 'books'); } }); });
+      classes.forEach(function (c) { if ((c.name + ' ' + c.type + ' ' + c.studio + ' ' + c.instructor + ' ' + c.notes).toLowerCase().indexOf(q) > -1) results.push({ kind: c.type, title: c.name + ', ' + c.studio, where: 'Classes', tagClass: 'tag t-health', pick: function () { go('health', 'training'); } }); });
+      restaurants.forEach(function (r) { if ((r.name + ' ' + r.cuisine + ' ' + r.hood).toLowerCase().indexOf(q) > -1) results.push({ kind: r.cuisine, title: r.name + ', ' + r.hood, where: 'Vision board', tagClass: 'tag t-social', pick: function () { go('social', 'board'); } }); });
+      trips.forEach(function (t) { if (t.name.toLowerCase().indexOf(q) > -1) results.push({ kind: 'Trip', title: t.name, where: 'Trip planner', tagClass: 'tag t-money', pick: function () { go('finance', 'trips', { tripSel: t.id }); } }); });
+    }
+
+    return {
+      query: st.query || '', onQuery: function (e) { self.setState({ query: e.target.value }); },
+      searching: !!q, notSearching: !q, results: results, resultCount: results.length, noResults: !!q && results.length === 0,
+      nav: nav, subs: subs, hasSubs: subDefs[tab].length > 1, v: v,
+      bannerTitle: banners[tab][0], bannerSub: banners[tab][1],
+      periods: periods, period: period, trendCards: trendCards, showTrend: showTrend,
+      clockH: clockH, clockM: clockM, clockAmPm: clockAmPm, clockDay: clockDay, arches: arches,
+      calPriorities: calPriorities, myPriorities: myPriorities, prioDraft: st.prioDraft || '', onPrioDraft: function (e) { self.setState({ prioDraft: e.target.value }); }, addPriority: addPriority,
+      recentDump: recentDump, goalCards: goalCards, areas: areas,
+      dForm: dForm, dFilters: dFilters, shownDump: shownDump, addDump: addDump,
+      onDUrl: function (e) { setD({ url: e.target.value }); }, onDType: function (e) { setD({ type: e.target.value }); }, onDTitle: function (e) { setD({ title: e.target.value }); }, onDNote: function (e) { setD({ note: e.target.value }); },
+      bForm: bForm, bStars: bStars, bFilters: bFilters, shownBooks: shownBooks, addBook: addBook, readCount: readCount, readPace: readPace, goalSpines: goalSpines,
+      onBTitle: function (e) { setB({ title: e.target.value }); }, onBAuthor: function (e) { setB({ author: e.target.value }); }, onBStatus: function (e) { setB({ status: e.target.value }); }, onBReview: function (e) { setB({ review: e.target.value }); },
+      budgetRows: budgetRows, budgetSpentLabel: fmt(bSpent) + ' of ' + fmt(bTotal),
+      priceStr: String(price), onPrice: function (e) { self.setState({ price: Number(e.target.value) || 0 }); }, presets: presets,
+      verdict: verdict, detail: detail, verdictBox: box, goalImpacts: goalImpacts,
+      tripFundPct: tripFundPct, tripFundFill: 'width: ' + tripFundPct + '%', tripFundLabel: fmt(allSaved) + ' of ' + fmt(allCost) + ' across ' + trips.length + ' trips',
+      tripChips: tripChips, trip: trip, tripCostStr: String(trip.cost), onTripCost: function (e) { updTrip({ cost: Number(e.target.value) || 0 }); },
+      monthOpts: monthOpts, tripSavedLabel: fmt(trip.saved) + ' of ' + fmt(trip.cost) + ' saved', tripSavedFill: 'width: ' + tripPct + '%',
+      tripMonthly: fmt(need), cuts: cuts, tripVerdict: tripVerdict, tripDetail: tripDetail, tripBox: tripBox, tripTiles: tripTiles,
+      cForm: cForm, cStars: cStars, cFilters: cFilters, cSorts: cSorts, shownClasses: shownClasses, noClasses: shownClasses.length === 0, addClass: addClass,
+      onCType: function (e) { setC({ type: e.target.value }); }, onCName: function (e) { setC({ name: e.target.value }); }, onCStudio: function (e) { setC({ studio: e.target.value }); },
+      onCInst: function (e) { setC({ instructor: e.target.value }); }, onCPrice: function (e) { setC({ price: e.target.value }); }, onCNotes: function (e) { setC({ notes: e.target.value }); },
+      classCount: classes.length, classMix: Object.keys(counts).map(function (k) { return k + ' ' + counts[k]; }).join(', '),
+      classSpend: fmt(spend), classAvg: paid.length ? fmt(spend / paid.length) : '$0', bestValue: best ? best.name : 'None yet',
+      pins: pins, onPhoto: onPhoto, pinDraft: st.pinDraft || '', onPinDraft: function (e) { self.setState({ pinDraft: e.target.value }); }, addPinLink: addPinLink,
+      rFilters: rFilters, shownRestaurants: shownRestaurants
+    };
+  }
+}
+</script>
+</body>
+</html>
