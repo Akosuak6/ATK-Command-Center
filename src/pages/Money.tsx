@@ -2,14 +2,15 @@ import { useState } from 'react';
 import { db, setMeta, uid, useMeta, useTable } from '../lib/db';
 import { hrefFor, navigate } from '../lib/router';
 import { addDays, daysLeftInMonth, money, monthName, pct, shortDate, todayISO } from '../lib/format';
-import { affordCheck, budgetSpent, planTrip, savingsStatus, tripMonthly } from '../lib/calc';
-import type { Account, Bill, BudgetCategory, MoneySnapshot, RoadmapItem, SavingsGoal, Trim, Trip, TripStatus } from '../lib/types';
+import { affordCheck, budgetSpent, cashLeft, planTrip, savingsStatus, tripMonthly } from '../lib/calc';
+import type { PointsWallet, Account, Bill, BudgetCategory, MoneySnapshot, RoadmapItem, SavingsGoal, Trim, Trip, TripStatus } from '../lib/types';
 import { Bar, Chips, EditButton, FileButton, useToast } from '../components/ui';
 import { ListEditor, TableEditor, type FieldDef } from '../components/ListEditor';
-import { BarChart, ProjectionChart, SERIES, SERIES_OTHER, StackedBar, type Segment } from '../components/Charts';
+import { BarChart, LineChart, ProjectionChart, SERIES, SERIES_OTHER, StackedBar, type Segment } from '../components/Charts';
 import { SPECIAL, needsReview, payee, usualByLabel, type SavingsPlan, importExport, incomeByMonth, incomeSources, liveLeftToSpend, useExportSpend, type ImportSummary } from '../lib/money';
 import { Sheet } from '../components/ui';
 import { longDate } from '../lib/format';
+import { coastAge, coastNumberAt, fiNumber, projectFire, type FireInputs } from '../lib/fire';
 
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -448,7 +449,7 @@ export function MoneyGoals() {
                   {chart && <span className={st.behind ? 'pct bad-text' : 'pct'}>{st.behind ? `Behind, ${st.pct}%` : `${st.pct}%`}</span>}
                 </span>
               </div>
-              {chart ? <ProjectionChart title={g.name} saved={g.saved} target={g.target} monthly={g.monthly} due={g.due} color={colorFor(g)} />
+              {chart ? <ProjectionChart title={g.name} saved={g.saved} target={g.target} monthly={g.monthly} due={g.due} color={colorFor(g)} rate={kindOf(g) === 'savings' ? 0 : 5} />
                 : <span className="num">{money(g.saved)}</span>}
               <span className="sub">{st.label}</span>
             </section>
@@ -463,6 +464,8 @@ export function MoneyGoals() {
           <span className="sub">{money(allSaved)} of {money(allCost)} across {trips.length} trips · {money(allMonthly)} a month</span>
         </section>
       </div>
+
+      <CoastFire />
 
       <section className="card" aria-labelledby="road-h">
         <div className="row"><h2 className="h2" id="road-h">Long term roadmap</h2><span className="sub">Next 5 years</span></div>
@@ -508,6 +511,7 @@ const trimFields: FieldDef<Trim>[] = [
 ];
 
 export function TripPlanner({ tripId }: { tripId?: string }) {
+  const wallet = useMeta<PointsWallet>('points', { card: 'Chase Sapphire Preferred', balance: 0, centsPerPoint: 1 });
   const trips = useTable(db.trips, 'date');
   const trims = useTable(db.trims, 'order');
   const [edit, setEdit] = useState<'' | 'trip' | 'trims'>('');
@@ -528,6 +532,7 @@ export function TripPlanner({ tripId }: { tripId?: string }) {
   }
 
   const plan = planTrip(trip, trims);
+  const assignedPoints = trips.reduce((x, t) => x + (t.points ?? 0), 0);
   const upd = (patch: Partial<Trip>) => db.trips.update(trip.id, patch);
   const preset = [3, 5, 8, 12, 16];
   const isCustom = !preset.includes(trip.months);
@@ -551,7 +556,13 @@ export function TripPlanner({ tripId }: { tripId?: string }) {
             <span aria-hidden="true">$</span>
             <input id="tripcost" type="number" inputMode="decimal" min={0} value={trip.cost || ''} placeholder="0" onChange={(e) => upd({ cost: Number(e.target.value) || 0, estimate: false })} />
           </div>
-          <label htmlFor="tripsaved" className="lbl">Saved so far</label>
+          <label htmlFor="trippoints" className="lbl">{wallet.card} points to use{trip.points ? `, worth about ${money(trip.pointsValue ?? 0)}` : ''}</label>
+          <div className="money-input">
+            <input id="trippoints" type="number" inputMode="numeric" min={0} value={trip.points || ''} placeholder="0 points"
+              onChange={(e) => { const pts = Number(e.target.value) || 0; void upd({ points: pts, pointsValue: Math.round((pts * wallet.centsPerPoint) / 100) }); }} />
+          </div>
+          {wallet.balance > 0 && <span className="sub">{(wallet.balance - assignedPoints + (trip.points ?? 0)).toLocaleString('en-US')} points free to use{assignedPoints > wallet.balance ? `, ${(assignedPoints - wallet.balance).toLocaleString('en-US')} more assigned than you have` : ''}</span>}
+          <label htmlFor="tripsaved" className="lbl">Cash saved so far</label>
           <div className="money-input">
             <span aria-hidden="true">$</span>
             <input id="tripsaved" type="number" inputMode="decimal" min={0} value={trip.saved || ''} placeholder="0" onChange={(e) => upd({ saved: Number(e.target.value) || 0 })} />
@@ -705,7 +716,11 @@ function SavingsFirst({ plan, budgetTotal, usualTotal, budgetedExport, onEdit }:
 function TravelYear({ trips }: { trips: Trip[] }) {
   const upcoming = trips.filter((t) => !t.date || t.date >= todayISO());
   if (upcoming.length < 2) return null;
-  const total = upcoming.reduce((a, t) => a + Math.max(0, t.cost - t.saved), 0);
+  const wallet = useMeta<PointsWallet>('points', { card: 'Chase Sapphire Preferred', balance: 0, centsPerPoint: 1 });
+  const total = upcoming.reduce((a, t) => a + cashLeft(t), 0);
+  const ptsUsed = upcoming.reduce((a, t) => a + (t.points ?? 0), 0);
+  const ptsValue = upcoming.reduce((a, t) => a + (t.pointsValue ?? 0), 0);
+  const [editWallet, setEditWallet] = useState(false);
   const monthlyNow = upcoming.reduce((a, t) => a + tripMonthly(t), 0);
   const byMonth = new Map<string, number>();
   upcoming.forEach((t) => { if (t.date) byMonth.set(t.date.slice(0, 7), (byMonth.get(t.date.slice(0, 7)) ?? 0) + t.cost); });
@@ -716,11 +731,97 @@ function TravelYear({ trips }: { trips: Trip[] }) {
     <section className="card" aria-labelledby="ty-h">
       <div className="row row-wrap"><h2 className="h2" id="ty-h">Your travel year</h2><span className="sub">{upcoming.length} trips</span></div>
       <div className="plan-flow">
-        <div><span className="lbl">Still to save</span><span className="num">{money(total)}</span></div>
+        <div><span className="lbl">Cash still to save</span><span className="num">{money(total)}</span></div>
+        <div><span className="lbl">Covered by points</span><span className="num">{money(ptsValue)}</span><span className="sub">{ptsUsed.toLocaleString('en-US')} of {wallet.balance.toLocaleString('en-US')} points</span></div>
         <div><span className="lbl">Needed a month right now</span><span className="num">{money(monthlyNow)}</span></div>
         {busiest && <div><span className="lbl">Busiest month</span><span className="num" style={{ fontSize: 22 }}>{MONTHS[Number(busiest[0].slice(5)) - 1]}</span><span className="sub">{money(busiest[1])} of trips</span></div>}
       </div>
       {estimates > 0 && <p className="sub">{estimates} of these costs are my estimates. Tap a trip below and type your real cost.</p>}
+      <p className="sub">Points are valued at {wallet.centsPerPoint} cent{wallet.centsPerPoint === 1 ? '' : 's'} each, a careful number. Transfers to airline and hotel partners can be worth more.</p>
+      <div><EditButton label="Edit points balance" onClick={() => setEditWallet(true)} /></div>
+      <ListEditor<PointsWallet & { id: string }>
+        title="Points" open={editWallet} onClose={() => setEditWallet(false)} rows={[{ id: 'points', ...wallet }]}
+        fields={[{ key: 'card', label: 'Card' }, { key: 'balance', label: 'Points balance', type: 'number' }, { key: 'centsPerPoint', label: 'Cents each point is worth', type: 'number' }]}
+        onSave={({ id: _id, ...rest }) => setMeta('points', rest)}
+      />
+    </section>
+  );
+}
+
+interface FireSettings { age: number; retireAge: number; spending: number; withdrawal: number; realReturn: number; match: number }
+
+// Coast FIRE: the point where growth alone carries your investments to your retirement number.
+function CoastFire() {
+  const accounts = useTable(db.accounts, 'order');
+  const savings = useTable(db.savings, 'order');
+  const fire = useMeta<FireSettings>('fire', { age: 0, retireAge: 55, spending: 0, withdrawal: 4, realReturn: 5, match: 0 });
+  const plan = useMeta<SavingsPlan>('savingsPlan', { takeHome: 0, saveFirst: 0 });
+  const [edit, setEdit] = useState(false);
+  const invested = accounts.filter((a) => a.group === 'Investments' || a.group === 'Retirement').reduce((s, a) => s + a.balance, 0);
+  const yearly = savings.filter((g) => g.contributing !== false && (g.fromPaycheck || g.kind === 'retirement' || g.kind === 'brokerage')).reduce((s, g) => s + g.monthly * 12, 0) + (fire.match || 0);
+  const spending = fire.spending || Math.round(((plan.takeHome - plan.saveFirst) * 12) / 1000) * 1000;
+  const save = (patch: Partial<FireSettings>) => setMeta('fire', { ...fire, ...patch });
+
+  if (!fire.age) {
+    return (
+      <section className="card" aria-labelledby="fire-h">
+        <h2 className="h2" id="fire-h">Coast FIRE</h2>
+        <p className="body">Add your age to see when growth alone carries you to retirement at {fire.retireAge}.</p>
+        <div className="inline-add">
+          <label htmlFor="fire-age" className="sr">Your age</label>
+          <input id="fire-age" type="number" inputMode="numeric" className="field" placeholder="Your age" onBlur={(e) => { const v = Number(e.target.value); if (v > 15 && v < 80) void save({ age: v }); }} />
+          <button type="button" className="btn2">Save</button>
+        </div>
+      </section>
+    );
+  }
+  const inputs: FireInputs = { age: fire.age, retireAge: fire.retireAge, spending, withdrawal: fire.withdrawal, realReturn: fire.realReturn, contributions: yearly };
+  const rows = projectFire(inputs, invested);
+  const ca = coastAge(rows);
+  const fi = fiNumber(inputs);
+  const coastNow = coastNumberAt(inputs, fire.age);
+  const last = rows[rows.length - 1];
+  const thisYear = new Date().getFullYear();
+  const reached = invested >= coastNow;
+  return (
+    <section className="card" aria-labelledby="fire-h">
+      <div className="row row-wrap" style={{ alignItems: 'center' }}>
+        <h2 className="h2" id="fire-h">Coast FIRE</h2>
+        <Chips label="Growth after inflation" value={fire.realReturn} onChange={(v) => void save({ realReturn: v })}
+          options={[{ value: 4, label: '4% careful' }, { value: 5, label: '5% conservative' }, { value: 6, label: '6% typical' }]} />
+      </div>
+      <p className="body">Retire at {fire.retireAge} spending {money(spending)} a year in today's dollars. At a {fire.withdrawal}% withdrawal rate that takes <strong>{money(fi)}</strong>. Coast FIRE is the point where, even if you stopped investing, growth alone gets you there by {fire.retireAge}.</p>
+      <div className="plan-flow">
+        <div><span className="lbl">Invested now</span><span className="num">{money(invested)}</span></div>
+        <div><span className="lbl">Needed to coast today</span><span className="num">{money(coastNow)}</span></div>
+        <div><span className="lbl">Coast FIRE</span><span className={`num${reached ? ' good-text' : ''}`}>{reached ? 'Reached' : ca ? `Age ${ca}` : 'After 55'}</span>{!reached && ca && <span className="sub">around {thisYear + (ca - fire.age)}</span>}</div>
+        <div><span className="lbl">At {fire.retireAge}, still investing</span><span className="num">{money(last.balance)}</span></div>
+      </div>
+      <LineChart
+        title={`Investments by age, ${fire.realReturn}% growth after inflation`}
+        xs={rows.map((r) => r.age)}
+        xLabel={(a) => `Age ${a}`}
+        marker={ca && !reached ? { x: ca, label: 'Coast FIRE' } : undefined}
+        series={[
+          { label: 'If you keep investing', color: SERIES[0], values: rows.map((r) => r.balance) },
+          { label: 'Needed to coast', color: SERIES[1], values: rows.map((r) => r.coastNumber) },
+          { label: 'If you stopped today', color: SERIES[2], values: rows.map((r) => r.noMore), dashed: true }
+        ]}
+      />
+      <p className="sub">Counts {money(yearly)} a year going in: your 401k, employer match and E*Trade. Today's dollars, after inflation, so the numbers keep today's buying power. Raises and bonuses would move Coast FIRE earlier.</p>
+      <div><EditButton label="Edit Coast FIRE settings" onClick={() => setEdit(true)} /></div>
+      <ListEditor<FireSettings & { id: string }>
+        title="Coast FIRE settings" open={edit} onClose={() => setEdit(false)} rows={[{ id: 'fire', ...fire, spending }]}
+        fields={[
+          { key: 'age', label: 'Your age', type: 'number' },
+          { key: 'retireAge', label: 'Retire at', type: 'number' },
+          { key: 'spending', label: 'Spending a year in retirement, today\'s dollars', type: 'number' },
+          { key: 'withdrawal', label: 'Withdrawal rate %', type: 'number' },
+          { key: 'realReturn', label: 'Growth after inflation %', type: 'number' },
+          { key: 'match', label: 'Employer match a year', type: 'number' }
+        ]}
+        onSave={({ id: _id, ...rest }) => setMeta('fire', rest)}
+      />
     </section>
   );
 }

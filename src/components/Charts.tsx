@@ -40,25 +40,34 @@ interface ProjectionProps {
   due?: string;
   title: string;
   color?: string;
+  rate?: number; // yearly growth in percent, for investments; 0 for cash
 }
 
 // Where a goal's balance goes if the monthly amount keeps going in. One series, so no legend.
-export function ProjectionChart({ saved, target, monthly, due, title, color = SERIES[0] }: ProjectionProps) {
+export function ProjectionChart({ saved, target, monthly, due, title, color = SERIES[0], rate = 0 }: ProjectionProps) {
   const [ref, width] = useWidth<HTMLDivElement>();
   const [hover, setHover] = useState<number | null>(null);
   useEffect(() => setHover(null), [saved, target, monthly]);
 
-  const left = Math.max(0, target - saved);
-  const toTarget = monthly > 0 ? Math.ceil(left / monthly) : Infinity;
+  const r = rate / 100 / 12;
+  const grow = (m: number) => {
+    let b = saved;
+    for (let i = 0; i < m; i++) b = b * (1 + r) + monthly;
+    return b;
+  };
+  let toTarget = Infinity;
+  if (monthly > 0 || r > 0) {
+    for (let m = 0; m <= 600; m++) if (grow(m) >= target) { toTarget = m; break; }
+  }
   const toDue = due ? monthsUntil(due) : 0;
   const horizon = Math.max(6, Math.min(60, Math.max(Number.isFinite(toTarget) ? toTarget : 12, toDue) + 1));
-  const values = Array.from({ length: horizon + 1 }, (_, m) => Math.min(target, saved + monthly * m));
+  const values = Array.from({ length: horizon + 1 }, (_, m) => (r > 0 ? grow(m) : Math.min(target, saved + monthly * m)));
 
   const H = 156;
   const pad = { l: 46, r: 14, t: 18, b: 24 };
   const iw = Math.max(80, width - pad.l - pad.r);
   const ih = H - pad.t - pad.b;
-  const yMax = niceMax(Math.max(target, saved));
+  const yMax = niceMax(Math.max(target, saved, ...values));
   const x = (m: number) => pad.l + (m / horizon) * iw;
   const y = (v: number) => pad.t + ih - (v / yMax) * ih;
   const line = values.map((v, m) => `${m ? 'L' : 'M'}${x(m).toFixed(1)},${y(v).toFixed(1)}`).join('');
@@ -116,6 +125,7 @@ export function ProjectionChart({ saved, target, monthly, due, title, color = SE
         {reachM !== null ? <>Reaches the target in <strong>{monthLabel(reachM)}</strong></> : <>Not reached within 5 years at this pace</>}
         {behind && <>, <span className="bad-text">{money(atDue!)} by the due date, behind</span></>}
         {!behind && dueM !== null && reachM !== null && <>, <span className="good-text">before the due date</span></>}
+        {rate > 0 && <>. Assumes {rate}% growth a year</>}
       </p>
     </div>
   );
@@ -201,6 +211,82 @@ export function BarChart({ data, title, highlight }: { data: BarDatum[]; title: 
           <strong>{money(h.value)}</strong> <span>{h.label}{h.note ? ` · ${h.note}` : ''}</span>
         </div>
       )}
+    </div>
+  );
+}
+
+export interface LineSeries { label: string; color: string; values: number[]; dashed?: boolean }
+
+const bigMoney = (v: number) => (v >= 1e6 ? `$${(v / 1e6).toFixed(v >= 1e7 ? 0 : 1)}M` : compact(v));
+
+// Two or three series over the same years. Legend always shown with end values; tap or hover for any year.
+export function LineChart({ xs, series, title, marker, xLabel = (v: number) => String(v) }: {
+  xs: number[]; series: LineSeries[]; title: string; marker?: { x: number; label: string }; xLabel?: (v: number) => string;
+}) {
+  const [ref, width] = useWidth<HTMLDivElement>();
+  const [hover, setHover] = useState<number | null>(null);
+  const H = 220;
+  const pad = { l: 52, r: 12, t: 18, b: 26 };
+  const iw = Math.max(80, width - pad.l - pad.r);
+  const ih = H - pad.t - pad.b;
+  const max = niceMax(Math.max(1, ...series.flatMap((s) => s.values)));
+  const n = Math.max(1, xs.length - 1);
+  const x = (i: number) => pad.l + (i / n) * iw;
+  const y = (v: number) => pad.t + ih - (Math.min(v, max) / max) * ih;
+  const path = (vals: number[]) => vals.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('');
+  const onMove = (e: PointerEvent<SVGRectElement>) => {
+    const box = (e.currentTarget.ownerSVGElement as SVGSVGElement).getBoundingClientRect();
+    setHover(Math.max(0, Math.min(n, Math.round(((e.clientX - box.left - pad.l) / iw) * n))));
+  };
+  const mi = marker ? xs.indexOf(marker.x) : -1;
+  const ticks = [0, Math.round(n / 2), n];
+  const summary = `${title}. ${series.map((s) => `${s.label}: ${bigMoney(s.values[0])} at ${xLabel(xs[0])}, ${bigMoney(s.values[n])} at ${xLabel(xs[n])}`).join('. ')}.${marker && mi >= 0 ? ` ${marker.label} at ${xLabel(marker.x)}.` : ''}`;
+  return (
+    <div className="stack-s" style={{ gap: 10 }}>
+      <div className="chart" ref={ref}>
+        <svg width={width} height={H} role="img" aria-label={summary}>
+          {[0, max / 2, max].map((t) => (
+            <g key={t}>
+              <line x1={pad.l} x2={pad.l + iw} y1={y(t)} y2={y(t)} className="grid" />
+              <text x={pad.l - 6} y={y(t) + 4} textAnchor="end" className="tick">{bigMoney(t)}</text>
+            </g>
+          ))}
+          {ticks.map((i) => (
+            <text key={i} x={x(i)} y={H - 6} textAnchor={i === 0 ? 'start' : i === n ? 'end' : 'middle'} className="tick">{xLabel(xs[i])}</text>
+          ))}
+          {mi >= 0 && (
+            <g>
+              <line x1={x(mi)} x2={x(mi)} y1={pad.t} y2={pad.t + ih} className="ref" />
+              <text x={x(mi) + (mi > n * 0.6 ? -4 : 4)} y={pad.t + 10} textAnchor={mi > n * 0.6 ? 'end' : 'start'} className="ref-label">{marker!.label}</text>
+            </g>
+          )}
+          {series.map((s) => (
+            <path key={s.label} d={path(s.values)} fill="none" stroke={s.color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" strokeDasharray={s.dashed ? '5 4' : undefined} />
+          ))}
+          {series.map((s) => <circle key={s.label} cx={x(n)} cy={y(s.values[n])} r={4} fill={s.color} className="dot" />)}
+          {hover !== null && <line x1={x(hover)} x2={x(hover)} y1={pad.t} y2={pad.t + ih} className="cross" />}
+          {hover !== null && series.map((s) => <circle key={s.label} cx={x(hover)} cy={y(s.values[hover])} r={4.5} fill={s.color} className="dot" />)}
+          <rect x={pad.l} y={0} width={iw} height={H} fill="transparent" style={{ touchAction: 'pan-y' }} onPointerMove={onMove} onPointerDown={onMove} onPointerLeave={() => setHover(null)} />
+        </svg>
+        {hover !== null && (
+          <div className="chart-tip multi" style={{ left: Math.min(Math.max(x(hover), 100), width - 100) }}>
+            <strong>{xLabel(xs[hover])}</strong>
+            {series.map((s) => (
+              <span key={s.label}><span className="swatch" style={{ background: s.color }} aria-hidden="true" />{s.label} {bigMoney(s.values[hover])}</span>
+            ))}
+          </div>
+        )}
+      </div>
+      <ul className="legend">
+        {series.map((s) => (
+          <li key={s.label}>
+            <span className="swatch" style={s.dashed ? { background: `repeating-linear-gradient(90deg, ${s.color} 0 4px, transparent 4px 7px)` } : { background: s.color }} aria-hidden="true" />
+            <span className="legend-name">{s.label}</span>
+            <span className="legend-val">{bigMoney(s.values[n])}</span>
+            <span className="sub">at {xLabel(xs[n])}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

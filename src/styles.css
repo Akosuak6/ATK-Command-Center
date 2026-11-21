@@ -500,3 +500,5 @@ dialog.sheet[open] { display: flex; flex-direction: column; overflow: hidden; }
 .plan-flow > div { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: 12px; background: #ECE5DA; }
 .plan-flow .num { font-size: clamp(22px, 6vw, 30px); white-space: nowrap; }
 .acct-group { margin-bottom: 10px; } .acct-group > .row { padding-top: 8px; }
+.chart-tip.multi { display: flex; flex-direction: column; gap: 2px; white-space: nowrap; }
+.chart-tip.multi .swatch { display: inline-block; width: 8px; height: 8px; margin-right: 6px; }

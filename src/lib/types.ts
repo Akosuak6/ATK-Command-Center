@@ -88,7 +88,9 @@ export interface ShowEvent {
 }
 
 export type TripStatus = 'Booked' | 'Planning' | 'Dreaming';
-export interface Trip { id: string; name: string; cost: number; months: number; saved: number; status: TripStatus; date: string; photo?: string; estimate?: boolean }
+export interface Trip { id: string; name: string; cost: number; months: number; saved: number; status: TripStatus; date: string; photo?: string; estimate?: boolean; points?: number; pointsValue?: number } // pointsValue: dollars the points cover
+
+export interface PointsWallet { card: string; balance: number; centsPerPoint: number }
 
 export interface Trim { id: string; order: number; label: string; how: string; cap: number }
 

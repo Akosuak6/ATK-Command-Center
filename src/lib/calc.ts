@@ -15,7 +15,12 @@ export function budgetSpent(cat: BudgetCategory, classes: FitnessClass[], fromEx
 }
 
 export function tripMonthly(t: Trip) {
-  return Math.max(0, t.cost - t.saved) / Math.max(1, t.months || 1);
+  return cashLeft(t) / Math.max(1, t.months || 1);
+}
+
+// What a trip still needs in cash, after what is saved and what points will cover.
+export function cashLeft(t: Trip) {
+  return Math.max(0, t.cost - t.saved - (t.pointsValue ?? 0));
 }
 
 export interface AffordResult {
@@ -67,7 +72,7 @@ export interface TripPlan {
 }
 
 export function planTrip(trip: Trip, trims: Trim[]): TripPlan {
-  const remainingCost = Math.max(0, trip.cost - trip.saved);
+  const remainingCost = cashLeft(trip);
   const need = tripMonthly(trip);
   let remaining = need;
   let covered = 0;
