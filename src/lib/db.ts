@@ -88,6 +88,24 @@ export class CommandCenterDB extends Dexie {
         else if (!cur.pastVisits && r.pastVisits) await tx.table('studios').update(r.id, { pastVisits: r.pastVisits });
       }
     });
+    // Version 9: replace untouched sample trips, trims and bills with the seed ones.
+    this.version(9).stores({}).upgrade(async (tx) => {
+      const data = seed as Record<string, { id: string }[] | undefined>;
+      const sample: Record<string, (ids: string[]) => boolean> = {
+        trips: (ids) => ids.every((x) => ['lisbon', 'tokyo', 'beach'].includes(x)),
+        trims: (ids) => ids.every((x) => /^t\d+$/.test(x)),
+        bills: (ids) => ids.every((x) => /^bl\d+$/.test(x))
+      };
+      for (const [table, isSample] of Object.entries(sample)) {
+        const rows = data[table];
+        if (!rows?.length || isSample(rows.map((r) => r.id))) continue;
+        const current = (await tx.table(table).toArray()) as { id: string }[];
+        if (current.length === 0 || isSample(current.map((r) => r.id))) {
+          await tx.table(table).clear();
+          await tx.table(table).bulkAdd(rows);
+        }
+      }
+    });
     // Version 8: replace the untouched sample savings goals with the seed ones.
     this.version(8).stores({}).upgrade(async (tx) => {
       const rows = (seed as { savings?: { id: string }[] }).savings ?? [];

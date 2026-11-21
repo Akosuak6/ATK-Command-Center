@@ -101,7 +101,18 @@ export function MoneyOverview() {
   };
   const today = todayISO();
   const due = snap.asOf ? addDays(snap.asOf, 7) : '';
-  const soon = bills.filter((b) => b.due >= today && b.due <= addDays(today, 14));
+  // Monthly bills roll forward to their next date.
+  const nextDue = (b: Bill) => {
+    if (b.repeat !== 'monthly' || !b.due) return b.due;
+    let d = b.due;
+    for (let i = 0; i < 240 && d < today; i++) {
+      const [y, m, day] = d.split('-').map(Number);
+      const nm = new Date(y, m, Math.min(day, new Date(y, m + 1, 0).getDate()));
+      d = `${nm.getFullYear()}-${String(nm.getMonth() + 1).padStart(2, '0')}-${String(nm.getDate()).padStart(2, '0')}`;
+    }
+    return d;
+  };
+  const soon = bills.map((b) => ({ ...b, due: nextDue(b) })).filter((b) => b.due >= today && b.due <= addDays(today, 14)).sort((a, b) => a.due.localeCompare(b.due));
   const daysLeft = daysLeftInMonth();
 
   return (
@@ -172,7 +183,7 @@ export function MoneyOverview() {
       />
       <TableEditor<Bill>
         title="Edit bills" open={edit === 'bills'} onClose={() => setEdit('')} table={db.bills} rows={bills}
-        fields={[{ key: 'name', label: 'Bill' }, { key: 'due', label: 'Due', type: 'date' }, { key: 'amount', label: 'Amount', type: 'number' }]}
+        fields={[{ key: 'name', label: 'Bill' }, { key: 'due', label: 'Due', type: 'date' }, { key: 'amount', label: 'Amount', type: 'number' }, { key: 'repeat', label: 'Repeats', type: 'select', options: [{ value: '', label: 'Once' }, { value: 'monthly', label: 'Every month' }] }]}
         itemName={(b) => b.name} addLabel="Add a bill" make={() => ({ name: '', due: todayISO(), amount: 0, note: '' })}
       />
     </div>
@@ -183,7 +194,7 @@ const budgetFields: FieldDef<BudgetCategory>[] = [
   { key: 'label', label: 'Category' },
   { key: 'budget', label: 'Monthly budget', type: 'number' },
   { key: 'spent', label: 'Spent so far (manual only)', type: 'number' },
-  { key: 'source', label: 'Spent comes from', type: 'select', options: [{ value: 'manual', label: 'Entered by me' }, { value: 'export', label: 'Rocket Money export' }, { value: 'classes', label: 'Health class log' }] }
+  { key: 'source', label: 'Spent comes from', type: 'select', options: [{ value: 'manual', label: 'Entered by me' }, { value: 'export', label: 'Rocket Money export' }, { value: 'fixed', label: 'Fixed bill, paid every month' }, { value: 'classes', label: 'Health class log' }] }
 ];
 
 export function useImpactGoals() {
@@ -239,6 +250,7 @@ export function MoneyBudget() {
               <Bar value={pct(spent, c.budget)} warn={over} />
               {c.source === 'classes' && <span className="sub">Pulled from your class log, {monthClasses} classes this month</span>}
               {c.source === 'export' && <span className="sub">From your Rocket Money export</span>}
+              {c.source === 'fixed' && <span className="sub">Fixed each month</span>}
             </div>
           ))}
         </div>
@@ -310,6 +322,7 @@ const savingsFields: FieldDef<SavingsGoal>[] = [
   { key: 'due', label: 'Target date', type: 'date' },
   { key: 'kind', label: 'Kind', type: 'select', options: [{ value: 'retirement', label: 'Retirement (401k, IRA)' }, { value: 'savings', label: 'Savings' }, { value: 'brokerage', label: 'Brokerage' }, { value: 'other', label: 'Other' }] },
   { key: 'contributing', label: 'Still contributing', type: 'checkbox' },
+  { key: 'fromPaycheck', label: 'Comes out of my paycheck (like a 401k)', type: 'checkbox' },
   { key: 'order', label: 'Priority (1 gets money first)', type: 'number' },
   { key: 'note', label: 'Note', wide: true }
 ];
@@ -337,7 +350,8 @@ export function MoneyGoals() {
   // Three kinds, in your order of priority: retirement levers first, then savings, then brokerage.
   const KIND_LABEL: Record<string, string> = { retirement: 'Retirement', savings: 'Savings', brokerage: 'Brokerage', other: 'Other goals' };
   const kindOf = (g: SavingsGoal) => g.kind ?? (/401|ira|roth|retire/i.test(g.name) ? 'retirement' : /brokerage|invest/i.test(g.name) ? 'brokerage' : 'savings');
-  const active = savings.filter((g) => g.contributing !== false);
+  const payroll = savings.filter((g) => g.contributing !== false && g.fromPaycheck);
+  const active = savings.filter((g) => g.contributing !== false && !g.fromPaycheck);
   const byKind = (k: string) => active.filter((g) => kindOf(g) === k).reduce((a, g) => a + g.monthly, 0) + (k === 'savings' ? Math.round(allMonthly) : 0);
   const segments: Segment[] = [
     { label: 'Retirement', value: byKind('retirement'), color: SERIES[0] },
@@ -376,6 +390,9 @@ export function MoneyGoals() {
               </li>
             )}
           </ol>
+          {payroll.map((g) => (
+            <p className="sub" key={g.id} style={{ marginTop: 8 }}><strong>Before your paycheck: {g.name} {money(g.monthly)} a month.</strong>{g.note ? ` ${g.note}` : ''}</p>
+          ))}
           {plan.saveFirst > 0 && (
             <p className={`sub${total - plan.saveFirst >= 10 ? ' bad-text' : ''}`} style={{ marginTop: 8 }}>
               {Math.abs(total - plan.saveFirst) < 10
@@ -493,6 +510,7 @@ export function TripPlanner({ tripId }: { tripId?: string }) {
 
   return (
     <div className="stack">
+      <TravelYear trips={trips} />
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
         <Chips label="Choose a trip" value={trip.id} onChange={(id) => navigate('money', 'trips', id)} options={trips.map((t) => ({ value: t.id, label: t.name }))} />
         <button type="button" className="btn-text" onClick={addTrip}>Add a trip</button>
@@ -504,10 +522,10 @@ export function TripPlanner({ tripId }: { tripId?: string }) {
             <h2 className="h2" id="trip-h" style={{ fontSize: 28 }}>{trip.name}</h2>
             <EditButton label={`Edit ${trip.name}`} onClick={() => setEdit('trip')} />
           </div>
-          <label htmlFor="tripcost" className="lbl">Total trip cost</label>
+          <label htmlFor="tripcost" className="lbl">Total trip cost{trip.estimate ? ' (my estimate, change it to your real number)' : ''}</label>
           <div className="money-input">
             <span aria-hidden="true">$</span>
-            <input id="tripcost" type="number" inputMode="decimal" min={0} value={trip.cost || ''} placeholder="0" onChange={(e) => upd({ cost: Number(e.target.value) || 0 })} />
+            <input id="tripcost" type="number" inputMode="decimal" min={0} value={trip.cost || ''} placeholder="0" onChange={(e) => upd({ cost: Number(e.target.value) || 0, estimate: false })} />
           </div>
           <label htmlFor="tripsaved" className="lbl">Saved so far</label>
           <div className="money-input">
@@ -651,10 +669,34 @@ function SavingsFirst({ plan, budgetTotal, usualTotal, budgetedExport, onEdit }:
         <div><span className="lbl">Take home</span><span className="num">{money(plan.takeHome)}</span></div>
         <div><span className="lbl">Save first</span><span className="num good-text">{money(plan.saveFirst)}</span></div>
         <div><span className="lbl">Spending budget</span><span className="num">{money(budgetTotal)}</span></div>
-        <div><span className="lbl">{rest >= 0 ? 'Left for rent and bills' : 'Short'}</span><span className={`num${rest < 0 ? ' bad-text' : ''}`}>{money(Math.abs(rest))}</span></div>
+        <div><span className="lbl">{rest >= 0 ? 'Left over' : 'Short'}</span><span className={`num${rest < 0 ? ' bad-text' : ''}`}>{money(Math.abs(rest))}</span></div>
       </div>
       {cut > 0 && <p className="note-box tone-good">This budget spends <strong>{money(cut)} less a month</strong> than you usually do, which is {money(cut * 12)} a year toward your goals.</p>}
       <div><EditButton label="Edit savings plan" onClick={onEdit} /></div>
+    </section>
+  );
+}
+
+// The whole travel year at a glance, so the trips can be weighed against the savings plan.
+function TravelYear({ trips }: { trips: Trip[] }) {
+  const upcoming = trips.filter((t) => !t.date || t.date >= todayISO());
+  if (upcoming.length < 2) return null;
+  const total = upcoming.reduce((a, t) => a + Math.max(0, t.cost - t.saved), 0);
+  const monthlyNow = upcoming.reduce((a, t) => a + tripMonthly(t), 0);
+  const byMonth = new Map<string, number>();
+  upcoming.forEach((t) => { if (t.date) byMonth.set(t.date.slice(0, 7), (byMonth.get(t.date.slice(0, 7)) ?? 0) + t.cost); });
+  const busiest = [...byMonth.entries()].sort((a, b) => b[1] - a[1])[0];
+  const estimates = upcoming.filter((t) => t.estimate).length;
+  const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  return (
+    <section className="card" aria-labelledby="ty-h">
+      <div className="row row-wrap"><h2 className="h2" id="ty-h">Your travel year</h2><span className="sub">{upcoming.length} trips</span></div>
+      <div className="plan-flow">
+        <div><span className="lbl">Still to save</span><span className="num">{money(total)}</span></div>
+        <div><span className="lbl">Needed a month right now</span><span className="num">{money(monthlyNow)}</span></div>
+        {busiest && <div><span className="lbl">Busiest month</span><span className="num" style={{ fontSize: 22 }}>{MONTHS[Number(busiest[0].slice(5)) - 1]}</span><span className="sub">{money(busiest[1])} of trips</span></div>}
+      </div>
+      {estimates > 0 && <p className="sub">{estimates} of these costs are my estimates. Tap a trip below and type your real cost.</p>}
     </section>
   );
 }

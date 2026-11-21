@@ -9,6 +9,7 @@ export function classSpendThisMonth(classes: FitnessClass[], ref = todayISO()) {
 
 export function budgetSpent(cat: BudgetCategory, classes: FitnessClass[], fromExport: Record<string, number> = {}) {
   if (cat.source === 'classes') return classSpendThisMonth(classes);
+  if (cat.source === 'fixed') return cat.budget;
   if (cat.source === 'export') return fromExport[cat.label] ?? 0;
   return cat.spent;
 }

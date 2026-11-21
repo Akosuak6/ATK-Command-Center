@@ -88,7 +88,7 @@ export interface ShowEvent {
 }
 
 export type TripStatus = 'Booked' | 'Planning' | 'Dreaming';
-export interface Trip { id: string; name: string; cost: number; months: number; saved: number; status: TripStatus; date: string; photo?: string }
+export interface Trip { id: string; name: string; cost: number; months: number; saved: number; status: TripStatus; date: string; photo?: string; estimate?: boolean }
 
 export interface Trim { id: string; order: number; label: string; how: string; cap: number }
 
@@ -107,7 +107,7 @@ export interface Goal {
   achieved: boolean;
 }
 
-export interface BudgetCategory { id: string; order: number; label: string; budget: number; spent: number; source: 'manual' | 'classes' | 'export' }
+export interface BudgetCategory { id: string; order: number; label: string; budget: number; spent: number; source: 'manual' | 'classes' | 'export' | 'fixed' } // fixed: a set bill like rent, counted as paid each month
 
 // One row from a Rocket Money export. amount > 0 is money out, amount < 0 is money in.
 export interface Transaction {
@@ -136,6 +136,7 @@ export interface SavingsGoal {
   due: string;
   kind?: SavingsKind;
   contributing?: boolean; // false: still invested, but no new money goes in
+  fromPaycheck?: boolean; // taken out before take home pay, like a 401k
   note?: string;
 }
 
@@ -143,7 +144,7 @@ export interface RoadmapItem { id: string; year: string; title: string; detail: 
 
 export interface Account { id: string; order: number; name: string; balance: number }
 
-export interface Bill { id: string; name: string; due: string; amount: number; note: string }
+export interface Bill { id: string; name: string; due: string; amount: number; note: string; repeat?: 'monthly' | '' }
 
 export interface Supplement { id: string; order: number; name: string; note: string; timing: 'AM' | 'Midday' | 'PM' }
 
