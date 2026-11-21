@@ -472,3 +472,5 @@ dialog.sheet[open] { display: flex; flex-direction: column; overflow: hidden; }
 .pip.on { background: linear-gradient(180deg, var(--card) 0 18%, #6E8CC4 18% 100%); }
 .habit-day.partial { background: #DCE3EF; border-color: var(--navy-2); color: var(--navy); }
 .habit-count { font-size: 10px; font-weight: 600; }
+.stats-tight .num { font-size: clamp(22px, 6.4vw, 32px); white-space: nowrap; }
+.stat { overflow: hidden; }

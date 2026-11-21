@@ -95,7 +95,20 @@ export interface Goal {
   achieved: boolean;
 }
 
-export interface BudgetCategory { id: string; order: number; label: string; budget: number; spent: number; source: 'manual' | 'classes' }
+export interface BudgetCategory { id: string; order: number; label: string; budget: number; spent: number; source: 'manual' | 'classes' | 'export' }
+
+// One row from a Rocket Money export. amount > 0 is money out, amount < 0 is money in.
+export interface Transaction {
+  id: string;
+  date: string;
+  account: string;
+  institution: string;
+  name: string;
+  amount: number;
+  category: string; // Rocket Money category
+  kind: 'spend' | 'income' | 'transfer' | 'ignored';
+  note: string;
+}
 
 export interface SavingsGoal { id: string; order: number; name: string; target: number; saved: number; monthly: number; due: string }
 

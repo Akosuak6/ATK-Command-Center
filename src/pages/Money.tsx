@@ -6,7 +6,62 @@ import { affordCheck, budgetSpent, planTrip, savingsStatus, tripMonthly } from '
 import type { Account, Bill, BudgetCategory, MoneySnapshot, RoadmapItem, SavingsGoal, Trim, Trip, TripStatus } from '../lib/types';
 import { Bar, Chips, EditButton, FileButton, useToast } from '../components/ui';
 import { ListEditor, TableEditor, type FieldDef } from '../components/ListEditor';
-import { ProjectionChart, SERIES, SERIES_OTHER, StackedBar, type Segment } from '../components/Charts';
+import { BarChart, ProjectionChart, SERIES, SERIES_OTHER, StackedBar, type Segment } from '../components/Charts';
+import { importExport, incomeByMonth, incomeSources, liveLeftToSpend, useExportSpend, type ImportSummary } from '../lib/money';
+import { Sheet } from '../components/ui';
+import { longDate } from '../lib/format';
+
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+// Live numbers: budget spending from the export once it exists, otherwise what you entered.
+export function useLiveMoney() {
+  const budget = useTable(db.budget, 'order');
+  const classes = useTable(db.classes);
+  const snap = useMeta<MoneySnapshot>('moneySnapshot', EMPTY_SNAP);
+  const { spent, txns, map } = useExportSpend();
+  const spentFor = (c: BudgetCategory) => budgetSpent(c, classes, spent);
+  const { left, live } = liveLeftToSpend(budget, spentFor, snap.leftToSpend);
+  return { budget, classes, snap, spent, txns, map, spentFor, left, live };
+}
+
+function IncomeSection() {
+  const { txns } = useExportSpend();
+  const months = incomeByMonth(txns, 12);
+  const sources = incomeSources(txns);
+  if (!txns.some((t) => t.kind === 'income')) return null;
+  const thisKey = todayISO().slice(0, 7);
+  const cur = months[months.length - 1];
+  const prev = months[months.length - 2];
+  const fullMonths = months.slice(0, -1).filter((m) => m.total > 0).slice(-3);
+  const avg = fullMonths.length ? fullMonths.reduce((a, m) => a + m.total, 0) / fullMonths.length : 0;
+  const ytd = months.filter((m) => m.month.startsWith(thisKey.slice(0, 4))).reduce((a, m) => a + m.total, 0);
+  const data = months.map((m) => {
+    const mi = Number(m.month.slice(5)) - 1;
+    return { key: m.month, label: `${MONTH_NAMES[mi]} ${m.month.slice(0, 4)}`, short: MONTH_NAMES[mi][0], value: m.total, note: m.month === thisKey ? 'so far' : undefined };
+  });
+  const top = sources.slice(0, 6);
+  return (
+    <section className="card" aria-labelledby="income-h">
+      <div className="row row-wrap"><h2 className="h2" id="income-h">Income</h2><span className="sub">From your Rocket Money export</span></div>
+      <div className="stats stats-tight">
+        <div className="stat"><span className="lbl">This month so far</span><span className="num">{money(cur.total)}</span></div>
+        <div className="stat"><span className="lbl">Last month</span><span className="num">{money(prev.total)}</span></div>
+        <div className="stat"><span className="lbl">Monthly average</span><span className="num">{money(avg)}</span><span className="sub">Last {fullMonths.length} full months</span></div>
+        <div className="stat"><span className="lbl">This year</span><span className="num">{money(ytd)}</span></div>
+      </div>
+      <BarChart title="Income by month, last 12 months" data={data} highlight={thisKey} />
+      <div>
+        <span className="lbl">Where it came from this year</span>
+        {top.map((s) => (
+          <div className="line" key={s.name}>
+            <span className="line-main"><span>{s.name}</span><span className="sub">{s.count} {s.count === 1 ? 'deposit' : 'deposits'}, latest {shortDate(s.last)}</span></span>
+            <span style={{ fontWeight: 600 }}>{money(s.total)}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 const EMPTY_SNAP: MoneySnapshot = {
   asOf: '', leftToSpend: 0, savingsRate: 0, savingsTarget: 25, netWorth: 0, netWorthChange: 0, cardDue: '', cardAmount: 0, autopay: true, transactions: 0, covers: ''
@@ -27,11 +82,23 @@ const snapFields: FieldDef<MoneySnapshot & { id: string }>[] = [
 ];
 
 export function MoneyOverview() {
-  const snap = useMeta<MoneySnapshot>('moneySnapshot', EMPTY_SNAP);
+  const { snap, left, live } = useLiveMoney();
   const accounts = useTable(db.accounts, 'order');
   const bills = useTable(db.bills, 'due');
   const toast = useToast();
   const [edit, setEdit] = useState<'' | 'snap' | 'accounts' | 'bills'>('');
+  const [summary, setSummary] = useState<ImportSummary | null>(null);
+  const [importing, setImporting] = useState(false);
+  const onExport = async (file: File) => {
+    setImporting(true);
+    try {
+      setSummary(await importExport(file));
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'That file could not be read');
+    } finally {
+      setImporting(false);
+    }
+  };
   const today = todayISO();
   const due = snap.asOf ? addDays(snap.asOf, 7) : '';
   const soon = bills.filter((b) => b.due >= today && b.due <= addDays(today, 14));
@@ -40,21 +107,22 @@ export function MoneyOverview() {
   return (
     <div className="stack">
       <section aria-label="Key numbers" className="stats">
-        <div className="stat"><span className="lbl">Left to spend</span><span className="num">{money(snap.leftToSpend)}</span><span className="sub">About {money(snap.leftToSpend / daysLeft)} a day</span></div>
+        <div className="stat"><span className="lbl">Left to spend</span><span className="num">{money(left)}</span><span className="sub">About {money(left / daysLeft)} a day{live ? ', live from your export' : ''}</span></div>
         <div className="stat"><span className="lbl">Savings rate</span><span className="num">{snap.savingsRate}%</span><span className="sub">Target {snap.savingsTarget}%</span></div>
         <div className="stat"><span className="lbl">Net worth</span><span className="num">{money(snap.netWorth)}</span><span className="sub">{snap.netWorthChange >= 0 ? 'Up' : 'Down'} {money(Math.abs(snap.netWorthChange))} this month</span></div>
         <div className="stat"><span className="lbl">Card due {shortDate(snap.cardDue)}</span><span className="num">{money(snap.cardAmount)}</span><span className="sub">Autopay {snap.autopay ? 'on' : 'off'}</span></div>
       </section>
       <div style={{ marginTop: -8 }}><EditButton label="Edit key numbers" onClick={() => setEdit('snap')} /></div>
+      <IncomeSection />
       <div className="grid3">
         <section className="card" aria-labelledby="export-h">
           <div className="row"><h2 className="h2" id="export-h">Weekly export</h2>{due && <span className="tag t-money">Due {shortDate(due)}</span>}</div>
-          <p className="body">Every week, export your transactions from Rocket Money as a CSV and drop it here. Budgets, goals and the purchase check all update from it.</p>
+          <p className="body">Every week, export your transactions from Rocket Money (CSV or Excel) and drop it here. Budgets, income, goals and the purchase check all update from it. Importing the same weeks again never doubles anything.</p>
           <div>
             <div className="line"><span>Last export</span><span style={{ fontWeight: 600 }}>{snap.asOf ? `${shortDate(snap.asOf)} · ${snap.transactions} transactions` : 'None yet'}</span></div>
             <div className="line"><span>Covers</span><span style={{ fontWeight: 600, textAlign: 'right' }}>{snap.covers || 'Not set'}</span></div>
           </div>
-          <FileButton label="Upload this week's CSV" accept=".csv,text/csv" onFile={() => toast('CSV import arrives in the next build. Nothing was changed.')} />
+          <FileButton label={importing ? 'Reading your export' : "Upload this week's export"} accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onFile={(f) => void onExport(f)} />
         </section>
         <section className="card" aria-labelledby="acct-h">
           <div className="row"><h2 className="h2" id="acct-h">Accounts</h2><span className="sub">{snap.asOf ? `As of ${shortDate(snap.asOf)}` : ''}</span></div>
@@ -73,6 +141,22 @@ export function MoneyOverview() {
           <EditButton label="Edit bills" onClick={() => setEdit('bills')} />
         </section>
       </div>
+      <Sheet title="Export imported" open={!!summary} onClose={() => setSummary(null)}>
+        {summary && (
+          <div className="stack-s" style={{ gap: 12 }}>
+            <p className="body"><strong>{summary.added} new transactions</strong>{summary.already ? `, ${summary.already} already here` : ''}, from {longDate(summary.from)} to {longDate(summary.to)}.</p>
+            <div>
+              <div className="line"><span>Income</span><span style={{ fontWeight: 600 }}>{summary.income}</span></div>
+              <div className="line"><span>Spending</span><span style={{ fontWeight: 600 }}>{summary.spending}</span></div>
+              <div className="line"><span>Accounts</span><span style={{ fontWeight: 600, textAlign: 'right' }}>{summary.accounts.join(', ')}</span></div>
+            </div>
+            {summary.spending === 0 && (
+              <p className="note-box tone-tight">This file only has money coming in, so your budget did not change. In Rocket Money, clear any filters (like Income) before exporting so spending comes through too.</p>
+            )}
+            <button type="button" className="btn" onClick={() => setSummary(null)}>Done</button>
+          </div>
+        )}
+      </Sheet>
       <ListEditor<MoneySnapshot & { id: string }>
         title="Edit key numbers"
         open={edit === 'snap'}
@@ -99,7 +183,7 @@ const budgetFields: FieldDef<BudgetCategory>[] = [
   { key: 'label', label: 'Category' },
   { key: 'budget', label: 'Monthly budget', type: 'number' },
   { key: 'spent', label: 'Spent so far (manual only)', type: 'number' },
-  { key: 'source', label: 'Spent comes from', type: 'select', options: [{ value: 'manual', label: 'Entered by me' }, { value: 'classes', label: 'Health class log' }] }
+  { key: 'source', label: 'Spent comes from', type: 'select', options: [{ value: 'manual', label: 'Entered by me' }, { value: 'export', label: 'Rocket Money export' }, { value: 'classes', label: 'Health class log' }] }
 ];
 
 export function useImpactGoals() {
@@ -112,23 +196,24 @@ export function useImpactGoals() {
 }
 
 export function MoneyBudget() {
-  const budget = useTable(db.budget, 'order');
-  const classes = useTable(db.classes);
-  const snap = useMeta<MoneySnapshot>('moneySnapshot', EMPTY_SNAP);
+  const { budget, classes, spentFor, left, live, txns, map, spent: exportSpent } = useLiveMoney();
   const impactGoals = useImpactGoals();
   const [editing, setEditing] = useState(false);
+  const [mapping, setMapping] = useState(false);
   const [price, setPrice] = useState(350);
   const monthClasses = classes.filter((c) => c.date.slice(0, 7) === todayISO().slice(0, 7)).length;
 
   let spentTotal = 0;
   let budgetTotal = 0;
   const rows = budget.map((c) => {
-    const spent = budgetSpent(c, classes);
+    const spent = spentFor(c);
     spentTotal += spent;
     budgetTotal += c.budget;
     return { c, spent, over: spent > c.budget };
   });
-  const result = affordCheck(price, snap.leftToSpend, impactGoals, daysLeftInMonth());
+  const result = affordCheck(price, left, impactGoals, daysLeftInMonth());
+  const seenCats = [...new Set(txns.filter((t) => t.kind === 'spend').map((t) => t.category))].sort();
+  const unmapped = exportSpent['Unmapped'] ?? 0;
 
   return (
     <div className="grid2">
@@ -143,10 +228,37 @@ export function MoneyBudget() {
               </div>
               <Bar value={pct(spent, c.budget)} warn={over} />
               {c.source === 'classes' && <span className="sub">Pulled from your class log, {monthClasses} classes this month</span>}
+              {c.source === 'export' && <span className="sub">From your Rocket Money export</span>}
             </div>
           ))}
         </div>
-        <EditButton label="Edit budget categories" onClick={() => setEditing(true)} />
+        {unmapped > 0 && <p className="note-box tone-tight">{money(unmapped)} of spending this month is not matched to a budget category yet.</p>}
+        <div className="card-actions">
+          <EditButton label="Edit budget categories" onClick={() => setEditing(true)} />
+          {seenCats.length > 0 && <button type="button" className="btn-text" onClick={() => setMapping(true)}>Category mapping</button>}
+        </div>
+        <Sheet title="Category mapping" open={mapping} onClose={() => setMapping(false)}>
+          <p className="sub">Which budget category each Rocket Money category counts toward. Changes save straight away.</p>
+          {seenCats.map((rm) => (
+            <div className="form-col" key={rm}>
+              <label className="lbl" htmlFor={`map-${rm}`}>{rm}</label>
+              <select id={`map-${rm}`} className="field" value={map[rm] ?? 'Unmapped'}
+                onChange={async (e) => {
+                  const choice = e.target.value;
+                  const cur = (await db.meta.get('categoryMap'))?.value as Record<string, string> | undefined;
+                  await setMeta('categoryMap', { ...(cur ?? {}), [rm]: choice });
+                  // A budget category that now receives export spending starts reading from it.
+                  const cat = budget.find((x) => x.label === choice);
+                  if (cat && cat.source === 'manual') await db.budget.update(cat.id, { source: 'export' });
+                }}>
+                <option value="Unmapped">Not matched yet</option>
+                {budget.map((b) => <option key={b.id} value={b.label}>{b.label}</option>)}
+                <option value="Ignore">Leave out of the budget</option>
+              </select>
+            </div>
+          ))}
+          <button type="button" className="btn" onClick={() => setMapping(false)}>Done</button>
+        </Sheet>
       </section>
 
       <section className="card" aria-labelledby="afford-h">
@@ -161,7 +273,7 @@ export function MoneyBudget() {
           {[80, 350, 900, 2400].map((n) => <button key={n} type="button" className="preset" onClick={() => setPrice(n)}>{money(n)}</button>)}
         </div>
         <div className={`verdict tone-${result.tone}`} aria-live="polite">
-          <span className="lbl">Verdict · {money(snap.leftToSpend)} left this month</span>
+          <span className="lbl">Verdict · {money(left)} left this month{live ? ', live' : ''}</span>
           <span className="verdict-title">{result.verdict}</span>
           <span className="body" style={{ color: 'var(--ink-3)' }}>{result.detail}</span>
           <span className="lbl" style={{ marginTop: 4 }}>Goal impact</span>

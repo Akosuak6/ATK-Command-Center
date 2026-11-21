@@ -7,8 +7,10 @@ export function classSpendThisMonth(classes: FitnessClass[], ref = todayISO()) {
   return classes.filter((c) => sameMonth(c.date, ref)).reduce((a, c) => a + (Number(c.price) || 0), 0);
 }
 
-export function budgetSpent(cat: BudgetCategory, classes: FitnessClass[]) {
-  return cat.source === 'classes' ? classSpendThisMonth(classes) : cat.spent;
+export function budgetSpent(cat: BudgetCategory, classes: FitnessClass[], fromExport: Record<string, number> = {}) {
+  if (cat.source === 'classes') return classSpendThisMonth(classes);
+  if (cat.source === 'export') return fromExport[cat.label] ?? 0;
+  return cat.spent;
 }
 
 export function tripMonthly(t: Trip) {
@@ -200,12 +202,12 @@ export function readThisYear(books: Book[], ref = todayISO()) {
 
 // Life areas (simple, honest scores from what is stored; trend history comes later)
 
-export function moneyScore(budget: BudgetCategory[], classes: FitnessClass[], savingsRate: number, target: number) {
-  const within = budget.filter((c) => budgetSpent(c, classes) <= c.budget).length;
+export function moneyScore(budget: BudgetCategory[], classes: FitnessClass[], savingsRate: number, target: number, fromExport: Record<string, number> = {}) {
+  const within = budget.filter((c) => budgetSpent(c, classes, fromExport) <= c.budget).length;
   const share = budget.length ? within / budget.length : 1;
   const rate = target ? clamp(savingsRate / target, 0, 1) : 1;
   const worst = budget
-    .map((c) => ({ c, over: budgetSpent(c, classes) - c.budget }))
+    .map((c) => ({ c, over: budgetSpent(c, classes, fromExport) - c.budget }))
     .filter((x) => x.over > 0)
     .sort((a, b) => b.over - a.over)[0];
   return {

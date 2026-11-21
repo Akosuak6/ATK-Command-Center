@@ -8,6 +8,8 @@ import { Bar, Checkbox, EditButton, areaClass, useNow } from '../components/ui';
 import { IconTrash } from '../components/Icons';
 import { TableEditor, type FieldDef } from '../components/ListEditor';
 import { DUMP_LABEL, DUMP_TAG } from './Dump';
+import { useLiveMoney } from './Money';
+import { useExportSpend } from '../lib/money';
 
 const DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
@@ -15,6 +17,7 @@ export function HomeToday() {
   const now = useNow(10000);
   const today = todayISO();
   const snap = useMeta<MoneySnapshot | null>('moneySnapshot', null);
+  const liveMoney = useLiveMoney();
   const readingGoal = useMeta<number>('readingGoal', 20);
   const trips = useTable(db.trips, 'date');
   const classes = useTable(db.classes);
@@ -32,7 +35,7 @@ export function HomeToday() {
   const upcoming = todays.filter((e) => e.time >= nowHM || !/^\d/.test(e.time));
 
   const arches = [
-    { label: 'Monthly budget', stat: snap ? money(snap.leftToSpend) : 'Add data', href: hrefFor('money', 'budget') },
+    { label: 'Monthly budget', stat: snap ? money(liveMoney.left) : 'Add data', href: hrefFor('money', 'budget') },
     { label: trip ? `${trip.name.split(/\s+/)[0]} fund` : 'Trip fund', stat: trip ? `${pct(trip.saved, trip.cost)}%` : 'Plan one', href: hrefFor('money', 'trips', trip?.id) },
     { label: 'Classes', stat: String(classes.filter((c) => sameMonth(c.date, today)).length), href: hrefFor('health', 'classes') },
     { label: 'Bookshelf', stat: `${read}/${readingGoal}`, href: hrefFor('dump', 'books') }
@@ -169,7 +172,8 @@ export function HomeGoals() {
   ];
 
   const h = health[0] as HealthDay | undefined;
-  const ms = moneyScore(budget, classes, snap?.savingsRate ?? 0, snap?.savingsTarget ?? 0);
+  const { spent: exportSpent } = useExportSpend();
+  const ms = moneyScore(budget, classes, snap?.savingsRate ?? 0, snap?.savingsTarget ?? 0, exportSpent);
   const hr = h ? recovery(h) : null;
   const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
   const habitShare = habits.length ? habits.reduce((a, x) => a + x.done.filter((d) => d >= weekAgo).length, 0) / (habits.length * 7) : 0;

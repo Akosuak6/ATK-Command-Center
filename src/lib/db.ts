@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import seed from 'virtual:seed';
 import { addDays, todayISO } from './format';
 import type {
-  Account, Bill, Book, Studio, BudgetCategory, CalendarEvent, DumpItem, FitnessClass, Goal, Habit, HealthDay,
+  Account, Bill, Book, Studio, Transaction, BudgetCategory, CalendarEvent, DumpItem, FitnessClass, Goal, Habit, HealthDay,
   Meta, Person, Pin, Priority, Restaurant, RoadmapItem, SavingsGoal, ShowEvent, SkincareStep, Supplement,
   Trim, Trip, WishItem
 } from './types';
@@ -33,6 +33,7 @@ export class CommandCenterDB extends Dexie {
   calendar!: Table<CalendarEvent, string>;
   health!: Table<HealthDay, string>;
   studios!: Table<Studio, string>;
+  transactions!: Table<Transaction, string>;
 
   constructor() {
     super('akosua-command-center');
@@ -87,6 +88,8 @@ export class CommandCenterDB extends Dexie {
         else if (!cur.pastVisits && r.pastVisits) await tx.table('studios').update(r.id, { pastVisits: r.pastVisits });
       }
     });
+    // Version 6: transactions from Rocket Money exports.
+    this.version(6).stores({ transactions: 'id, date, category, kind' });
     // Version 5: replace the untouched sample supplements and habits with the seed ones.
     this.version(5).stores({}).upgrade(async (tx) => {
       const data = seed as Record<string, { id: string }[] | undefined>;

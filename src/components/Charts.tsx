@@ -148,3 +148,59 @@ export function StackedBar({ segments, label }: { segments: Segment[]; label: st
     </div>
   );
 }
+
+export interface BarDatum { key: string; label: string; short: string; value: number; note?: string }
+
+// Columns from one baseline, one series (so no legend). Tap or hover a column for its value.
+export function BarChart({ data, title, highlight }: { data: BarDatum[]; title: string; highlight?: string }) {
+  const [ref, width] = useWidth<HTMLDivElement>();
+  const [hover, setHover] = useState<number | null>(null);
+  const H = 170;
+  const pad = { l: 46, r: 6, t: 14, b: 22 };
+  const iw = Math.max(60, width - pad.l - pad.r);
+  const ih = H - pad.t - pad.b;
+  const max = niceMax(Math.max(1, ...data.map((d) => d.value)));
+  const band = iw / Math.max(1, data.length);
+  const bw = Math.min(24, Math.max(6, band * 0.62));
+  const y = (v: number) => pad.t + ih - (v / max) * ih;
+  const narrow = band < 30;
+  const col = (d: BarDatum, i: number) => {
+    const x = pad.l + band * i + (band - bw) / 2;
+    const top = y(d.value);
+    const h = pad.t + ih - top;
+    if (h <= 0) return null;
+    const r = Math.min(4, h, bw / 2);
+    const path = `M${x},${pad.t + ih}V${top + r}Q${x},${top} ${x + r},${top}H${x + bw - r}Q${x + bw},${top} ${x + bw},${top + r}V${pad.t + ih}Z`;
+    const dim = highlight && d.key !== highlight && hover !== i;
+    return <path key={d.key} d={path} fill={SERIES[0]} opacity={dim ? 0.55 : 1} />;
+  };
+  const summary = `${title}. ${data.map((d) => `${d.label} ${money(d.value)}`).join(', ')}.`;
+  const h = hover !== null ? data[hover] : null;
+  return (
+    <div className="chart" ref={ref}>
+      <svg width={width} height={H} role="img" aria-label={summary}>
+        {[0, max / 2, max].map((t) => (
+          <g key={t}>
+            <line x1={pad.l} x2={pad.l + iw} y1={y(t)} y2={y(t)} className="grid" />
+            <text x={pad.l - 6} y={y(t) + 4} textAnchor="end" className="tick">{compact(t)}</text>
+          </g>
+        ))}
+        {data.map(col)}
+        {data.map((d, i) => (
+          <text key={d.key} x={pad.l + band * i + band / 2} y={H - 6} textAnchor="middle" className="tick" fontWeight={d.key === highlight ? 700 : 400}>
+            {narrow ? d.short : d.label.slice(0, 3)}
+          </text>
+        ))}
+        {data.map((d, i) => (
+          <rect key={d.key} x={pad.l + band * i} y={pad.t} width={band} height={ih + pad.b} fill="transparent"
+            onPointerEnter={() => setHover(i)} onPointerDown={() => setHover(i)} onPointerLeave={() => setHover(null)} />
+        ))}
+      </svg>
+      {h && (
+        <div className="chart-tip" style={{ left: Math.min(Math.max(pad.l + band * hover! + band / 2, 80), width - 80) }}>
+          <strong>{money(h.value)}</strong> <span>{h.label}{h.note ? ` · ${h.note}` : ''}</span>
+        </div>
+      )}
+    </div>
+  );
+}
