@@ -10,6 +10,13 @@ import { IconPencil, IconTrash } from '../components/Icons';
 import { TableEditor } from '../components/ListEditor';
 import { useFocusItem } from '../components/Search';
 import { previewWithCover } from '../lib/preview';
+import { linkKind } from '../lib/links';
+import { LinkMedia } from '../components/LinkMedia';
+
+const pinLabel = (url?: string) => {
+  const k = url ? linkKind(url).kind : 'other';
+  return k === 'youtube' ? 'YouTube' : k === 'pinterest' ? 'Pinterest' : 'Pinned link';
+};
 
 const MAX_TICKET_BYTES = 6 * 1024 * 1024;
 
@@ -114,13 +121,13 @@ export function VisionBoard({ focus }: { focus?: string }) {
             {p.kind === 'photo' ? (
               <img src={p.src} alt="Pinned photo" loading="lazy" />
             ) : (
-              <a href={p.url} target="_blank" rel="noopener noreferrer" className="pin-link-wrap">
-                {p.cover && <img src={p.cover} alt="" loading="lazy" />}
-                <span className="pin-link">
-                <span className="lbl">Pinned link</span>
-                <span style={{ fontFamily: 'var(--serif)', fontSize: 20, paddingRight: p.cover ? 0 : 36 }}>{p.title}</span>
-                </span>
-              </a>
+              <div className="pin-link-wrap">
+                <LinkMedia url={p.url ?? ''} cover={p.cover} title={p.title ?? 'Pinned link'} className="pin-cover" />
+                <a href={p.url} target="_blank" rel="noopener noreferrer" className="pin-link">
+                  <span className="lbl">{pinLabel(p.url)}</span>
+                  <span style={{ fontFamily: 'var(--serif)', fontSize: 20, paddingRight: p.cover ? 0 : 76 }}>{p.title}</span>
+                </a>
+              </div>
             )}
             {p.kind === 'link' && (
               <button type="button" className="icon-btn pin-edit" style={{ border: 'none' }} aria-label={`Edit ${p.title}`} onClick={() => setEditingPin(p)}>

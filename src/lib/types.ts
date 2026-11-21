@@ -3,7 +3,7 @@
 export type Area = 'Work' | 'Health' | 'Money' | 'Social' | 'Learning' | 'Experiences' | 'Other';
 
 export interface DumpComment { text: string; date: string }
-export type DumpType = 'Article' | 'Think piece' | 'Substack' | 'Perspective' | 'Film' | 'TV show';
+export type DumpType = 'Article' | 'Think piece' | 'Substack' | 'Perspective' | 'Film' | 'TV show' | 'Video' | 'Pinterest';
 export interface DumpItem {
   id: string;
   type: DumpType;

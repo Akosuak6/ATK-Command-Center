@@ -8,18 +8,26 @@ import { TableEditor, type FieldDef } from '../components/ListEditor';
 import { useFocusItem } from '../components/Search';
 import { IconTrash } from '../components/Icons';
 import { previewWithCover } from '../lib/preview';
+import { linkKind } from '../lib/links';
+import { LinkMedia } from '../components/LinkMedia';
 
-export const DUMP_TYPES: DumpType[] = ['Article', 'Think piece', 'Substack', 'Perspective', 'Film', 'TV show'];
-export const DUMP_LABEL: Record<string, string> = { Article: 'Article', 'Think piece': 'Think piece', Substack: 'Substack', Perspective: 'New perspective', Film: 'Film', 'TV show': 'TV show' };
-const DUMP_PLURAL: Record<string, string> = { Article: 'Articles', 'Think piece': 'Think pieces', Substack: 'Substacks', Perspective: 'New perspectives', Film: 'Films', 'TV show': 'TV shows' };
-export const DUMP_TAG: Record<string, string> = { Article: 't-learn', 'Think piece': 't-work', Substack: 't-money', Perspective: 't-social', Film: 't-health', 'TV show': 't-health' };
+// YouTube links become Videos and Pinterest links become Pinterest, unless you chose otherwise.
+export function typeForLink(url: string, fallback: DumpType): DumpType {
+  const k = linkKind(normalizeUrl(url)).kind;
+  return k === 'youtube' ? 'Video' : k === 'pinterest' ? 'Pinterest' : fallback;
+}
+
+export const DUMP_TYPES: DumpType[] = ['Article', 'Think piece', 'Substack', 'Perspective', 'Film', 'TV show', 'Video', 'Pinterest'];
+export const DUMP_LABEL: Record<string, string> = { Article: 'Article', 'Think piece': 'Think piece', Substack: 'Substack', Perspective: 'New perspective', Film: 'Film', 'TV show': 'TV show', Video: 'Video', Pinterest: 'Pinterest' };
+const DUMP_PLURAL: Record<string, string> = { Article: 'Articles', 'Think piece': 'Think pieces', Substack: 'Substacks', Perspective: 'New perspectives', Film: 'Films', 'TV show': 'TV shows', Video: 'Videos', Pinterest: 'Pinterest' };
+export const DUMP_TAG: Record<string, string> = { Article: 't-learn', 'Think piece': 't-work', Substack: 't-money', Perspective: 't-social', Film: 't-health', 'TV show': 't-health', Video: 't-work', Pinterest: 't-social' };
 
 export async function addDumpItem(input: { url?: string; type?: DumpType; title?: string; note?: string; photo?: string }) {
   const url = input.url ? normalizeUrl(input.url) : '';
   const given = (input.title ?? '').trim();
   const item: DumpItem = {
     id: uid(),
-    type: input.type ?? 'Article',
+    type: input.type ?? (url ? typeForLink(url, 'Article') : 'Article'),
     title: given || (url ? titleFromUrl(url) : 'Untitled'),
     url,
     source: url ? hostOf(url) : 'Note',
@@ -79,7 +87,7 @@ export function DumpAll({ focus }: { focus?: string }) {
       <form className="card" aria-labelledby="paste-h" noValidate onSubmit={(e) => { e.preventDefault(); void submit(); }}>
         <div className="row row-wrap"><h2 className="h2" id="paste-h">Paste a link</h2><span className="sub">Articles, think pieces, Substacks, films, TV, anything worth keeping</span></div>
         <label htmlFor="dlink" className="sr">Link</label>
-        <input id="dlink" type="url" inputMode="url" autoCapitalize="off" autoCorrect="off" className="field" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="Paste a link from your phone" style={{ minHeight: 52, fontSize: 16 }} />
+        <input id="dlink" type="url" inputMode="url" autoCapitalize="off" autoCorrect="off" className="field" value={form.url} onChange={(e) => { const url = e.target.value; const k = linkKind(normalizeUrl(url)).kind; setForm({ ...form, url, type: k === 'other' ? form.type : typeForLink(url, form.type) }); }} placeholder="Paste any link, even YouTube or Pinterest" style={{ minHeight: 52, fontSize: 16 }} />
         {(form.url.trim() || form.title.trim() || form.note.trim()) && (<>
         <div className="form-grid">
           <div className="form-col">
@@ -104,12 +112,8 @@ export function DumpAll({ focus }: { focus?: string }) {
       {shown.length === 0 && <p className="empty">Nothing here yet.</p>}
       <div className="masonry">
         {shown.map((d) => (
-          <article className={`card${d.photo ? ' has-cover' : ''}`} style={{ gap: 10 }} key={d.id} id={`item-${d.id}`}>
-            {d.photo && (
-              d.url
-                ? <a href={d.url} target="_blank" rel="noopener noreferrer" className="dump-cover" tabIndex={-1} aria-hidden="true"><img src={d.photo} alt="" loading="lazy" /></a>
-                : <span className="dump-cover"><img src={d.photo} alt="" loading="lazy" /></span>
-            )}
+          <article className={`card${d.photo || linkKind(d.url).kind === 'youtube' ? ' has-cover' : ''}`} style={{ gap: 10 }} key={d.id} id={`item-${d.id}`}>
+            <LinkMedia url={d.url} cover={d.photo} title={d.title} />
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
               <span className={`tag ${DUMP_TAG[d.type] ?? 't-plain'}`}>{DUMP_LABEL[d.type] ?? d.type}</span>
               <span className="sub" style={{ flex: 1 }}>{d.source} · {shortDate(d.date)}</span>

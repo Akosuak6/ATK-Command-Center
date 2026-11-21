@@ -23,10 +23,46 @@ function meta(html, keys) {
   return '';
 }
 
+// YouTube and Pinterest publish official oEmbed endpoints; they are more reliable than their pages.
+function oembedFor(u) {
+  const h = u.hostname.replace(/^(www|m|music)\./, '');
+  if (h === 'youtu.be' || h === 'youtube.com') return { site: 'YouTube', api: `https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(u.href)}` };
+  if (h === 'pin.it' || /(^|\.)pinterest\.[a-z.]+$/.test(h)) return { site: 'Pinterest', api: `https://www.pinterest.com/oembed.json?url=${encodeURIComponent(u.href)}` };
+  return null;
+}
+
+async function tryOembed(u) {
+  const o = oembedFor(u);
+  if (!o) return null;
+  try {
+    let target = u;
+    if (u.hostname === 'pin.it') {
+      // Short links need resolving first; Pinterest's oEmbed wants the full pin address.
+      const r = await fetchWithTimeout(u.href, { headers: { 'user-agent': UA }, redirect: 'follow' });
+      target = new URL(r.url);
+      r.body?.cancel?.().catch?.(() => {});
+    }
+    const api = target === u ? o.api : oembedFor(target)?.api;
+    if (!api) return null;
+    const r = await fetchWithTimeout(api, { headers: { 'user-agent': UA, accept: 'application/json' } });
+    if (!r.ok) return null;
+    const j = await r.json();
+    const title = j.title || (j.author_name ? `${o.site} from ${j.author_name}` : '');
+    return { title, siteName: o.site, image: j.thumbnail_url || '' };
+  } catch {
+    return null;
+  }
+}
+
 export default async function handler(req, res) {
   const target = safeUrl(req.query?.url);
   res.setHeader('Access-Control-Allow-Origin', '*');
   if (!target) return res.status(400).json({ error: 'bad url' });
+  const embedded = await tryOembed(target);
+  if (embedded && embedded.image) {
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    return res.status(200).json(embedded);
+  }
   try {
     const r = await fetchWithTimeout(target.href, { headers: { 'user-agent': UA, accept: 'text/html,*/*' } });
     const type = r.headers.get('content-type') || '';
@@ -52,7 +88,7 @@ export default async function handler(req, res) {
       try { image = new URL(image, r.url).href; } catch { image = ''; }
     }
     res.setHeader('Cache-Control', 'public, max-age=86400');
-    return res.status(200).json({ title, siteName, image });
+    return res.status(200).json({ title: title || embedded?.title || '', siteName: embedded?.siteName || siteName, image });
   } catch {
     return res.status(502).json({ error: 'could not read that page' });
   }

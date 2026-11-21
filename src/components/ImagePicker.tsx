@@ -3,11 +3,11 @@ import { resizeBlob } from './ui';
 
 // Turns whatever was pasted or picked into something we can store:
 // a resized JPEG data URL when possible, otherwise the image URL itself.
-export async function imageFromUrl(url: string, maxWidth = 640): Promise<string> {
+export async function imageFromUrl(url: string, maxWidth = 640, minWidth = 1): Promise<string> {
   // Prove it is an image first. <img> works across sites even when fetch is blocked.
   await new Promise<void>((resolve, reject) => {
     const img = new Image();
-    img.onload = () => resolve();
+    img.onload = () => (img.naturalWidth >= minWidth ? resolve() : reject(new Error('not-image')));
     img.onerror = () => reject(new Error('not-image'));
     img.src = url;
   });
