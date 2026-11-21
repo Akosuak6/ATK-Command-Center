@@ -107,7 +107,18 @@ export interface Bill { id: string; name: string; due: string; amount: number; n
 
 export interface Supplement { id: string; order: number; name: string; note: string; timing: 'AM' | 'Midday' | 'PM' }
 
-export interface SkincareStep { id: string; time: 'AM' | 'PM'; order: number; step: string; days: string }
+export interface SkincareStep {
+  id: string;
+  time: 'AM' | 'PM';
+  order: number;
+  step: string;
+  days: string; // empty for every day, or e.g. "Mon, Thu"
+  note?: string; // how to use it, e.g. "on damp skin"
+  theme?: string; // names the night when this step runs, e.g. "Glycolic night"
+  exfoliant?: boolean; // skipped around a facial
+}
+
+export interface Facial { name: string; everyDays: number; last: string }
 
 export interface Habit { id: string; order: number; name: string; done: string[] }
 

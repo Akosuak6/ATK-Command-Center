@@ -66,6 +66,18 @@ export class CommandCenterDB extends Dexie {
       const rows = (seed as { studios?: Studio[] }).studios ?? [];
       if (rows.length) await tx.table('studios').bulkPut(rows);
     });
+    // Version 3: day by day skincare and the facial reminder. Replaces the sample skincare
+    // only if it was never edited, and adds the facial reminder if there is none.
+    this.version(3).stores({}).upgrade(async (tx) => {
+      const data = seed as { skincare?: SkincareStep[]; meta?: Record<string, unknown> };
+      const current = (await tx.table('skincare').toArray()) as SkincareStep[];
+      const untouchedSample = current.length > 0 && current.every((x) => /^sk\d+$/.test(x.id));
+      if (data.skincare?.length && (current.length === 0 || untouchedSample) && !data.skincare.every((x) => /^sk\d+$/.test(x.id))) {
+        await tx.table('skincare').clear();
+        await tx.table('skincare').bulkAdd(data.skincare);
+      }
+      if (data.meta?.facial && !(await tx.table('meta').get('facial'))) await tx.table('meta').put({ key: 'facial', value: data.meta.facial });
+    });
     this.on('populate', (tx) => {
       const data = resolveTokens(seed, todayISO()) as Record<string, unknown>;
       for (const [name, rows] of Object.entries(data)) {

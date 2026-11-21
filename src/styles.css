@@ -457,3 +457,10 @@ dialog.sheet[open] { display: flex; flex-direction: column; overflow: hidden; }
 .studio-name { font-size: 12px; font-weight: 600; line-height: 1.2; }
 .tally { position: absolute; top: 8px; left: 8px; min-width: 30px; height: 30px; padding: 0 6px; border-radius: 15px; background: var(--navy); color: var(--cream); font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px rgba(243, 238, 230, 0.9); font-variant-numeric: tabular-nums; }
 .photo-pill.top.after-tally { left: 46px; top: 12px; }
+
+/* Skincare */
+.skin-steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+.skin-steps li { padding-left: 2px; }
+.skin-steps li > span:first-child { display: block; }
+.skin-day { width: 40px; flex: none; font-family: var(--serif); font-size: 18px; }
+.line.is-today { background: #ECE5DA; margin: 0 -12px; padding-left: 12px; padding-right: 12px; border-radius: 8px; }

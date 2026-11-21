@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { db, setMeta, uid, useMeta, useTable } from '../lib/db';
-import { addDays, clock12, duration, money, parseISO, pct, sameMonth, shortDate, todayISO, weekdayShort } from '../lib/format';
+import { addDays, clock12, daysBetween, duration, money, parseISO, weekday, pct, sameMonth, shortDate, todayISO, weekdayShort } from '../lib/format';
 import { recovery, todaysCall } from '../lib/calc';
-import type { ClassType, FitnessClass, Studio, Habit, HealthDay, SkincareStep, Supplement, WishItem } from '../lib/types';
+import type { ClassType, Facial, FitnessClass, Studio, Habit, HealthDay, SkincareStep, Supplement, WishItem } from '../lib/types';
 import { Bar, Checkbox, Chips, EditButton, Sheet, Stars, useToast } from '../components/ui';
 import { ImagePicker } from '../components/ImagePicker';
 import { TableEditor, type FieldDef } from '../components/ListEditor';
@@ -321,21 +321,13 @@ export function HealthRoutines() {
   const habits = useTable(db.habits, 'order');
   const wishlist = useTable(db.wishlist);
   const supLog = useMeta<string[]>('supplementLog', []);
-  const skinLog = useMeta<{ am: string[]; pm: string[] }>('skincareLog', { am: [], pm: [] });
   const [edit, setEdit] = useState<'' | 'sup' | 'skin' | 'habits' | 'wish'>('');
   const today = todayISO();
   const last7 = Array.from({ length: 7 }, (_, i) => addDays(today, i - 6));
-  const last6 = last7.slice(1);
 
   const toggleIn = (list: string[], d: string) => (list.includes(d) ? list.filter((x) => x !== d) : [...list, d]);
   const supToday = supLog.includes(today);
   const s = streak(supLog);
-  const am = skincare.filter((x) => x.time === 'AM');
-  const pm = skincare.filter((x) => x.time === 'PM');
-  const dow = DOW[parseISO(today).getDay()];
-  const special = pm.find((x) => x.days && x.days.split(/[\s,]+/).includes(dow));
-  const bothDays = last6.filter((d) => skinLog.am.includes(d) && skinLog.pm.includes(d)).length;
-  const stepLabel = (x: SkincareStep, i: number) => `${i + 1}. ${x.step}${x.days ? ` (${x.days.split(/[\s,]+/).filter(Boolean).map((d) => d[0]).join(', ')})` : ''}`;
 
   return (
     <div className="grid2">
@@ -357,27 +349,7 @@ export function HealthRoutines() {
         </div>
       </section>
 
-      <section className="card" aria-labelledby="skin-h">
-        <div className="row"><h2 className="h2" id="skin-h">Skincare</h2><span className="sub">{special ? `Tonight: ${special.step.toLowerCase()} night` : 'Tonight: a simple night'}</span></div>
-        <div className="form-2" style={{ gap: 16 }}>
-          <div className="stack-s"><span className="lbl">Morning</span>{am.map((x, i) => <span key={x.id} style={{ fontSize: 14 }}>{stepLabel(x, i)}</span>)}</div>
-          <div className="stack-s"><span className="lbl">Evening</span>{pm.map((x, i) => <span key={x.id} style={{ fontSize: 14 }}>{stepLabel(x, i)}</span>)}</div>
-        </div>
-        <div className="form-2">
-          {(['am', 'pm'] as const).map((k) => {
-            const on = skinLog[k].includes(today);
-            return (
-              <button key={k} type="button" className="prio-toggle" aria-pressed={on} onClick={() => setMeta('skincareLog', { ...skinLog, [k]: toggleIn(skinLog[k], today) })}>
-                <Checkbox on={on} /><span style={{ fontSize: 14 }}>{k === 'am' ? 'Morning done' : 'Evening done'}</span>
-              </button>
-            );
-          })}
-        </div>
-        <div className="row row-wrap" style={{ alignItems: 'center' }}>
-          <span className="sub">Both routines done {bothDays} of the last 6 days</span>
-          <EditButton label="Edit skincare steps" onClick={() => setEdit('skin')} />
-        </div>
-      </section>
+      <SkincareCard steps={skincare} onEdit={() => setEdit('skin')} />
 
       <section className="card" aria-labelledby="habit-h">
         <div className="row"><h2 className="h2" id="habit-h">Daily habits</h2><span className="sub">Last 7 days, tap a day</span></div>
@@ -425,7 +397,7 @@ export function HealthRoutines() {
       />
       <TableEditor<SkincareStep>
         title="Edit skincare" open={edit === 'skin'} onClose={() => setEdit('')} table={db.skincare} rows={skincare}
-        fields={[{ key: 'time', label: 'Routine', type: 'select', options: [{ value: 'AM', label: 'Morning' }, { value: 'PM', label: 'Evening' }] }, { key: 'order', label: 'Step number', type: 'number' }, { key: 'step', label: 'Step', wide: true }, { key: 'days', label: 'Only on these days (optional)', placeholder: 'Mon, Wed, Fri', wide: true }]}
+        fields={[{ key: 'time', label: 'Routine', type: 'select', options: [{ value: 'AM', label: 'Morning' }, { value: 'PM', label: 'Evening' }] }, { key: 'order', label: 'Step number', type: 'number' }, { key: 'step', label: 'Step', wide: true }, { key: 'note', label: 'How to use it (optional)', wide: true }, { key: 'days', label: 'Only on these days (optional)', placeholder: 'Mon, Wed, Fri', wide: true }, { key: 'theme', label: 'Name for that night (optional)', placeholder: 'Glycolic night' }, { key: 'exfoliant', label: 'Exfoliant (skipped around a facial)', type: 'checkbox' }]}
         itemName={(x) => x.step} addLabel="Add a step" make={() => ({ time: 'PM', order: skincare.length + 1, step: '', days: '' })}
       />
       <TableEditor<Habit>
@@ -439,5 +411,113 @@ export function HealthRoutines() {
         itemName={(x) => x.text} addLabel="Add an idea" make={() => ({ text: '', tag: 'Try', done: false })}
       />
     </div>
+  );
+}
+
+const WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const daysOf = (x: SkincareStep) => x.days.split(/[\s,]+/).filter(Boolean);
+const runsOn = (x: SkincareStep, dow: string) => !x.days.trim() || daysOf(x).includes(dow);
+const nightName = (pm: SkincareStep[], dow: string) => pm.find((x) => x.theme && x.days && daysOf(x).includes(dow))?.theme ?? 'Recovery night';
+const FACIAL_BUFFER = 2; // days before and after a facial with no exfoliation
+
+function SkincareCard({ steps, onEdit }: { steps: SkincareStep[]; onEdit: () => void }) {
+  const skinLog = useMeta<{ am: string[]; pm: string[] }>('skincareLog', { am: [], pm: [] });
+  const facial = useMeta<Facial | null>('facial', null);
+  const [view, setView] = useState<'today' | 'week'>('today');
+  const [settingFacial, setSettingFacial] = useState(false);
+  const today = todayISO();
+  const dow = DOW[parseISO(today).getDay()];
+  const am = steps.filter((x) => x.time === 'AM');
+  const pm = steps.filter((x) => x.time === 'PM');
+  const last6 = Array.from({ length: 6 }, (_, i) => addDays(today, i - 5));
+  const bothDays = last6.filter((d) => skinLog.am.includes(d) && skinLog.pm.includes(d)).length;
+  const toggleIn = (list: string[], d: string) => (list.includes(d) ? list.filter((x) => x !== d) : [...list, d]);
+
+  const next = facial?.last ? addDays(facial.last, facial.everyDays || 30) : '';
+  const nearFacial = (d: string) => Boolean(
+    (facial?.last && Math.abs(daysBetween(facial.last, d)) <= FACIAL_BUFFER) || (next && Math.abs(daysBetween(d, next)) <= FACIAL_BUFFER)
+  );
+  const skipToday = nearFacial(today);
+  const todayPm = pm.filter((x) => runsOn(x, dow) && !(skipToday && x.exfoliant));
+  const todayAm = am.filter((x) => runsOn(x, dow));
+  const tonight = skipToday && pm.some((x) => x.exfoliant && runsOn(x, dow)) ? 'Recovery night' : nightName(pm, dow);
+  const list = (rows: SkincareStep[]) => (
+    <ol className="skin-steps">
+      {rows.map((x) => (
+        <li key={x.id}><span>{x.step}</span>{x.note && <span className="sub">{x.note}</span>}</li>
+      ))}
+      {rows.length === 0 && <li className="sub">No steps yet</li>}
+    </ol>
+  );
+
+  return (
+    <section className="card" aria-labelledby="skin-h">
+      <div className="row"><h2 className="h2" id="skin-h">Skincare</h2><span className="sub">{weekday(today)}: {tonight.toLowerCase()}</span></div>
+      <Chips label="Skincare view" value={view} onChange={setView} options={[{ value: 'today', label: 'Today' }, { value: 'week', label: 'This week' }]} />
+      {skipToday && pm.some((x) => x.exfoliant && runsOn(x, dow)) && (
+        <p className="note-box tone-tight">Your facial is within {FACIAL_BUFFER} days, so tonight skips exfoliating and becomes a recovery night.</p>
+      )}
+      {view === 'today' ? (
+        <div className="form-2" style={{ gap: 16 }}>
+          <div className="stack-s"><span className="lbl">Morning</span>{list(todayAm)}</div>
+          <div className="stack-s"><span className="lbl">Evening</span>{list(todayPm)}</div>
+        </div>
+      ) : (
+        <div>
+          {WEEK.map((d) => {
+            const extrasAm = am.filter((x) => x.days.trim() && daysOf(x).includes(d));
+            const extrasPm = pm.filter((x) => x.days.trim() && daysOf(x).includes(d));
+            return (
+              <div className={`line${d === dow ? ' is-today' : ''}`} key={d}>
+                <span className="skin-day">{d}</span>
+                <span className="line-main">
+                  <strong style={{ fontSize: 14 }}>{nightName(pm, d)}</strong>
+                  <span className="sub">
+                    {extrasAm.length ? `AM ${extrasAm.map((x) => x.step).join(', ')}` : 'AM daily steps'}
+                    {extrasPm.length ? ` · PM ${extrasPm.map((x) => x.step).join(', ')}` : ''}
+                  </span>
+                </span>
+              </div>
+            );
+          })}
+          <p className="sub" style={{ marginTop: 8 }}>Every day: {[...am, ...pm].filter((x) => !x.days.trim()).map((x) => x.step).filter((v, i, arr) => arr.indexOf(v) === i).join(', ')}</p>
+        </div>
+      )}
+      <div className="form-2">
+        {(['am', 'pm'] as const).map((k) => {
+          const on = skinLog[k].includes(today);
+          return (
+            <button key={k} type="button" className="prio-toggle" aria-pressed={on} onClick={() => setMeta('skincareLog', { ...skinLog, [k]: toggleIn(skinLog[k], today) })}>
+              <Checkbox on={on} /><span style={{ fontSize: 14 }}>{k === 'am' ? 'Morning done' : 'Evening done'}</span>
+            </button>
+          );
+        })}
+      </div>
+      {facial && (
+        <div className="line" style={{ borderTop: '1px solid var(--divider)' }}>
+          <span className="line-main">
+            <strong style={{ fontSize: 14 }}>{facial.name}</strong>
+            <span className="sub">{facial.last ? `Last ${shortDate(facial.last)} · next around ${shortDate(next)}` : 'Add your last facial date to plan around it'}</span>
+          </span>
+          <button type="button" className="btn2" onClick={() => setSettingFacial(true)}>{facial.last ? 'Update' : 'Set date'}</button>
+        </div>
+      )}
+      <div className="row row-wrap" style={{ alignItems: 'center' }}>
+        <span className="sub">Both routines done {bothDays} of the last 6 days</span>
+        <EditButton label="Edit skincare steps" onClick={onEdit} />
+      </div>
+      <Sheet title="Facial" open={settingFacial} onClose={() => setSettingFacial(false)}>
+        <form className="stack-s" style={{ gap: 12 }} onSubmit={(e) => { e.preventDefault(); setSettingFacial(false); }}>
+          <label className="lbl" htmlFor="fname">Where</label>
+          <input id="fname" className="field" value={facial?.name ?? ''} onChange={(e) => setMeta('facial', { ...(facial ?? { everyDays: 30, last: '' }), name: e.target.value })} />
+          <label className="lbl" htmlFor="flast">Last facial</label>
+          <input id="flast" type="date" className="field" value={facial?.last ?? ''} onChange={(e) => setMeta('facial', { ...(facial ?? { name: 'Facial', everyDays: 30 }), last: e.target.value })} />
+          <button type="button" className="btn2" onClick={() => setMeta('facial', { ...(facial ?? { name: 'Facial', everyDays: 30 }), last: today })}>I had it today</button>
+          <label className="lbl" htmlFor="fevery">Every how many days</label>
+          <input id="fevery" type="number" inputMode="numeric" className="field" value={facial?.everyDays ?? 30} onChange={(e) => setMeta('facial', { ...(facial ?? { name: 'Facial', last: '' }), everyDays: Number(e.target.value) || 30 })} />
+          <button type="submit" className="btn">Done</button>
+        </form>
+      </Sheet>
+    </section>
   );
 }
