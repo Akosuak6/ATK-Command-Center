@@ -3,7 +3,7 @@ import { db, uid, useMeta, useTable } from '../lib/db';
 import { hostOf, normalizeUrl, shortDate, titleFromUrl, todayISO } from '../lib/format';
 import { readThisYear } from '../lib/calc';
 import type { Book, DumpItem, DumpType, Shelf } from '../lib/types';
-import { Chips, EditButton, StarText, Stars, useToast } from '../components/ui';
+import { Chips, EditButton, Sheet, StarText, Stars, useToast } from '../components/ui';
 import { TableEditor, type FieldDef } from '../components/ListEditor';
 import { useFocusItem } from '../components/Search';
 import { IconTrash } from '../components/Icons';
@@ -70,6 +70,7 @@ export function DumpAll({ focus }: { focus?: string }) {
         <div className="row row-wrap"><h2 className="h2" id="paste-h">Paste a link</h2><span className="sub">Articles, think pieces, Substacks, films, TV, anything worth keeping</span></div>
         <label htmlFor="dlink" className="sr">Link</label>
         <input id="dlink" type="url" inputMode="url" autoCapitalize="off" autoCorrect="off" className="field" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="Paste a link from your phone" style={{ minHeight: 52, fontSize: 16 }} />
+        {(form.url.trim() || form.title.trim() || form.note.trim()) && (<>
         <div className="form-grid">
           <div className="form-col">
             <label htmlFor="dtype" className="lbl">What is it</label>
@@ -84,6 +85,7 @@ export function DumpAll({ focus }: { focus?: string }) {
         </div>
         <label htmlFor="dnote" className="lbl">My take (optional)</label>
         <textarea id="dnote" rows={2} className="area" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder="What stuck with you" />
+        </>)}
         <button type="submit" className="btn">Dump it</button>
       </form>
 
@@ -143,6 +145,7 @@ export function Bookshelf({ focus }: { focus?: string }) {
   const [form, setForm] = useState(empty);
   const [filter, setFilter] = useState<'All' | Shelf>('All');
   const [editing, setEditing] = useState<Book | null>(null);
+  const [writing, setWriting] = useState(false);
   useFocusItem(focus, books.length > 0);
 
   const read = readThisYear(books).length;
@@ -155,6 +158,7 @@ export function Bookshelf({ focus }: { focus?: string }) {
     }
     void db.books.add({ id: uid(), title: form.title.trim(), author: form.author.trim() || 'Unknown author', status: form.status, stars: form.stars, review: form.review.trim(), date: todayISO() });
     setForm(empty);
+    setWriting(false);
     toast('Added to your shelf');
   };
 
@@ -171,9 +175,8 @@ export function Bookshelf({ focus }: { focus?: string }) {
         </div>
       </section>
 
-      <div className="split">
-        <form className="card narrow" aria-labelledby="review-h" onSubmit={(e) => { e.preventDefault(); add(); }}>
-          <h2 className="h2" id="review-h">Write a mini review</h2>
+      <Sheet title="Write a mini review" open={writing} onClose={() => setWriting(false)}>
+        <form className="stack-s" style={{ gap: 12 }} onSubmit={(e) => { e.preventDefault(); add(); }}>
           <label htmlFor="btitle" className="lbl">Book</label>
           <input id="btitle" type="text" className="field" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Title" />
           <label htmlFor="bauthor" className="lbl">Author</label>
@@ -190,10 +193,13 @@ export function Bookshelf({ focus }: { focus?: string }) {
           <textarea id="breview" rows={4} className="area" value={form.review} onChange={(e) => setForm({ ...form, review: e.target.value })} placeholder="A few lines: what stuck with you, who should read it" />
           <button type="submit" className="btn">Add to shelf</button>
         </form>
+      </Sheet>
+      <div className="split">
 
-        <section aria-labelledby="shelf-h" className="wide stack" style={{ gap: 14 }}>
+        <section aria-labelledby="shelf-h" className="stack" style={{ gap: 14, flex: 1, minWidth: 0 }}>
           <div className="trend-head">
             <h2 className="h2" id="shelf-h">Bookshelf</h2>
+            <button type="button" className="btn" onClick={() => setWriting(true)}>+ Write a mini review</button>
             <Chips label="Filter by shelf" value={filter} onChange={setFilter} options={[{ value: 'All', label: 'All' }, { value: 'Read', label: 'Read' }, { value: 'Reading', label: 'Reading' }, { value: 'Want to read', label: 'Want to read' }]} />
           </div>
           {shown.length === 0 && <p className="empty">No books on this shelf yet.</p>}

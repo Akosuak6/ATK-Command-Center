@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { db, setMeta, uid, useMeta, useTable } from '../lib/db';
-import { addDays, clock12, duration, money, monthShort, parseISO, pct, sameMonth, shortDate, todayISO, weekdayShort } from '../lib/format';
+import { addDays, clock12, duration, money, parseISO, pct, sameMonth, shortDate, todayISO, weekdayShort } from '../lib/format';
 import { recovery, todaysCall } from '../lib/calc';
 import type { ClassType, FitnessClass, Habit, HealthDay, SkincareStep, Supplement, WishItem } from '../lib/types';
-import { Bar, Checkbox, Chips, EditButton, StarText, Stars, useToast } from '../components/ui';
+import { Bar, Checkbox, Chips, EditButton, Sheet, Stars, useToast } from '../components/ui';
+import { ImagePicker } from '../components/ImagePicker';
 import { TableEditor, type FieldDef } from '../components/ListEditor';
 import { useFocusItem } from '../components/Search';
 
@@ -79,15 +80,17 @@ const classFields: FieldDef<FitnessClass>[] = [
   { key: 'instructor', label: 'Instructor' },
   { key: 'price', label: 'Price', type: 'number' },
   { key: 'rating', label: 'Stars (0 to 5)', type: 'number' },
-  { key: 'notes', label: 'Thoughts', type: 'textarea' }
+  { key: 'notes', label: 'Thoughts', type: 'textarea' },
+  { key: 'photo', label: 'Photo or studio logo', type: 'image' }
 ];
 
 export function HealthClasses({ focus }: { focus?: string }) {
   const classes = useTable(db.classes);
   const budget = useMeta<number>('fitnessBudget', 250);
   const toast = useToast();
-  const empty = { type: 'Pilates' as ClassType, name: '', studio: '', instructor: '', price: '', notes: '', rating: 0, date: todayISO() };
+  const empty = { type: 'Pilates' as ClassType, name: '', studio: '', instructor: '', price: '', notes: '', rating: 0, date: todayISO(), photo: undefined as string | null | undefined };
   const [form, setForm] = useState(empty);
+  const [logging, setLogging] = useState(false);
   const [filter, setFilter] = useState<'All' | ClassType>('All');
   const [sort, setSort] = useState<'newest' | 'rating' | 'price'>('newest');
   const [editing, setEditing] = useState<FitnessClass | null>(null);
@@ -106,6 +109,9 @@ export function HealthClasses({ focus }: { focus?: string }) {
       : sort === 'price' ? b.price - a.price || b.date.localeCompare(a.date)
       : b.date.localeCompare(a.date));
 
+  // Reuse the photo or logo from the last class at the same studio.
+  const studioPhoto = (studio: string) => classes.filter((c) => c.photo && studio && c.studio.toLowerCase() === studio.toLowerCase()).sort((a, b) => b.date.localeCompare(a.date))[0]?.photo;
+
   const add = () => {
     if (!form.name.trim() && !form.notes.trim()) {
       toast('Add a class name or a few notes first');
@@ -113,9 +119,11 @@ export function HealthClasses({ focus }: { focus?: string }) {
     }
     void db.classes.add({
       id: uid(), date: form.date || todayISO(), type: form.type, name: form.name.trim() || `${form.type} class`, studio: form.studio.trim(),
-      instructor: form.instructor.trim(), price: Number(form.price) || 0, rating: form.rating || 3, notes: form.notes.trim()
+      instructor: form.instructor.trim(), price: Number(form.price) || 0, rating: form.rating || 3, notes: form.notes.trim(),
+      photo: form.photo === undefined ? studioPhoto(form.studio.trim()) : form.photo ?? undefined
     });
     setForm({ ...empty, type: form.type });
+    setLogging(false);
     toast('Class saved');
   };
 
@@ -127,9 +135,37 @@ export function HealthClasses({ focus }: { focus?: string }) {
         <div className="stat"><span className="lbl">Cost per class</span><span className="num">{paid.length ? money(spend / paid.length) : '$0'}</span><span className="sub">Average this month</span></div>
         <div className="stat"><span className="lbl">Best value</span><span className="num" style={{ fontSize: 22 }}>{best ? best.name : 'None yet'}</span><span className="sub">Highest rating per dollar</span></div>
       </section>
-      <div className="split">
-        <form className="card narrow" aria-labelledby="log-h" onSubmit={(e) => { e.preventDefault(); add(); }}>
-          <h2 className="h2" id="log-h">Log a class</h2>
+
+      <section aria-labelledby="past-h" className="stack" style={{ gap: 14 }}>
+        <div className="row row-wrap" style={{ alignItems: 'center' }}>
+          <h2 className="h2" id="past-h">Past classes</h2>
+          <button type="button" className="btn" onClick={() => setLogging(true)}>+ Log a class</button>
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: 10 }}>
+          <Chips label="Filter by type" value={filter} onChange={setFilter} options={[{ value: 'All', label: 'All' }, ...CLASS_TYPES.map((t) => ({ value: t, label: t }))]} />
+          <Chips label="Sort" value={sort} onChange={setSort} options={[{ value: 'newest', label: 'Newest' }, { value: 'rating', label: 'Top rated' }, { value: 'price', label: 'Price' }]} />
+        </div>
+        {shown.length === 0 && <span className="sub">No classes of this type yet.</span>}
+        <div className="photo-grid">
+          {shown.map((c) => (
+            <button type="button" className="photo-card" key={c.id} id={`item-${c.id}`} onClick={() => setEditing(c)} aria-label={`${c.name}, ${shortDate(c.date)}. Tap to edit`}>
+              <span className="photo-media">
+                {c.photo ? <img src={c.photo} alt="" loading="lazy" /> : <PhotoPlaceholder word={c.type} seed={c.id} />}
+                <span className="photo-pill top">{c.type}</span>
+                {c.rating > 0 && <span className="photo-pill bottom"><span aria-hidden="true">★</span> {c.rating}</span>}
+              </span>
+              <span className="photo-cap">
+                <strong>{c.name}</strong>
+                <span className="sub">{[c.studio, c.instructor ? `with ${c.instructor}` : '', c.price ? money(c.price) : 'Free', shortDate(c.date)].filter(Boolean).join(' · ')}</span>
+                {c.notes && <span className="photo-notes">{c.notes}</span>}
+              </span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <Sheet title="Log a class" open={logging} onClose={() => setLogging(false)}>
+        <form className="stack-s" style={{ gap: 12 }} onSubmit={(e) => { e.preventDefault(); add(); }}>
           <div className="form-2">
             <div className="form-col"><label htmlFor="ctype" className="lbl">Type</label>
               <select id="ctype" className="field" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as ClassType })}>
@@ -143,48 +179,38 @@ export function HealthClasses({ focus }: { focus?: string }) {
           <label htmlFor="cname" className="lbl">Class</label>
           <input id="cname" type="text" className="field" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Reformer Flow" />
           <div className="form-2">
-            <div className="form-col"><label htmlFor="cstudio" className="lbl">Studio</label><input id="cstudio" type="text" className="field" value={form.studio} onChange={(e) => setForm({ ...form, studio: e.target.value })} placeholder="Studio" /></div>
+            <div className="form-col"><label htmlFor="cstudio" className="lbl">Studio</label><input id="cstudio" type="text" className="field" list="studios" value={form.studio} onChange={(e) => setForm({ ...form, studio: e.target.value, photo: form.photo === null ? undefined : form.photo })} placeholder="Studio" /></div>
             <div className="form-col"><label htmlFor="cinst" className="lbl">Instructor</label><input id="cinst" type="text" className="field" value={form.instructor} onChange={(e) => setForm({ ...form, instructor: e.target.value })} placeholder="Instructor" /></div>
           </div>
+          <datalist id="studios">{[...new Set(classes.map((c) => c.studio).filter(Boolean))].map((s) => <option key={s} value={s} />)}</datalist>
           <label htmlFor="cdate" className="lbl">Date</label>
           <input id="cdate" type="date" className="field" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
           <span className="lbl">Rating</span>
           <Stars label="Rating" value={form.rating} onPick={(n) => setForm({ ...form, rating: n })} />
           <label htmlFor="cnotes" className="lbl">Thoughts on the class</label>
           <textarea id="cnotes" rows={3} className="area" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="How did it feel? Book this instructor again?" />
+          <ImagePicker id="cphoto" label="Photo or studio logo (optional)" value={form.photo === undefined ? studioPhoto(form.studio) : form.photo ?? undefined} onChange={(src) => setForm({ ...form, photo: src ?? null })} />
           <button type="submit" className="btn">Save class</button>
         </form>
-        <section className="card wide" aria-labelledby="past-h">
-          <h2 className="h2" id="past-h">Past classes</h2>
-          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: 10 }}>
-            <Chips label="Filter by type" value={filter} onChange={setFilter} options={[{ value: 'All', label: 'All' }, ...CLASS_TYPES.map((t) => ({ value: t, label: t }))]} />
-            <Chips label="Sort" value={sort} onChange={setSort} options={[{ value: 'newest', label: 'Newest' }, { value: 'rating', label: 'Top rated' }, { value: 'price', label: 'Price' }]} />
-          </div>
-          <div>
-            {shown.map((c) => (
-              <div className="class-row" key={c.id} id={`item-${c.id}`}>
-                <div className="class-date"><span className="lbl" style={{ fontSize: 10 }}>{monthShort(c.date)}</span><span>{parseISO(c.date).getDate()}</span></div>
-                <div className="stack-s" style={{ flex: 1, minWidth: 0, gap: 6 }}>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
-                    <span className="tag t-health">{c.type}</span>
-                    <strong style={{ fontSize: 14 }}>{c.name}</strong>
-                    <span style={{ marginLeft: 'auto' }}><StarText value={c.rating} /></span>
-                  </div>
-                  <span className="sub">{[c.studio, c.instructor ? `with ${c.instructor}` : '', c.price ? money(c.price) : 'Free'].filter(Boolean).join(' · ')}</span>
-                  {c.notes && <p className="body">{c.notes}</p>}
-                  <div style={{ margin: '0 -8px -10px' }}><EditButton label={`Edit ${c.name}`} onClick={() => setEditing(c)} /></div>
-                </div>
-              </div>
-            ))}
-            {shown.length === 0 && <span className="sub">No classes of this type yet.</span>}
-          </div>
-        </section>
-      </div>
+      </Sheet>
       <TableEditor<FitnessClass>
         title="Edit class" open={!!editing} onClose={() => setEditing(null)} table={db.classes} rows={editing ? [editing] : []} fields={classFields}
         itemName={(c) => c.name}
       />
     </div>
+  );
+}
+
+const PLACEHOLDER_BG = ['#0F1A2E', '#6B4A33', '#1C2A47', '#556233', '#3A2F4A'];
+const PLACEHOLDER_H = [150, 190, 170, 220, 160];
+
+// A designed stand in until a photo is added: navy or walnut tile with a chrome word.
+export function PhotoPlaceholder({ word, seed }: { word: string; seed: string }) {
+  const n = [...seed].reduce((a, c) => a + c.charCodeAt(0), 0);
+  return (
+    <span className="photo-ph" style={{ background: PLACEHOLDER_BG[n % PLACEHOLDER_BG.length], height: PLACEHOLDER_H[n % PLACEHOLDER_H.length] }} aria-hidden="true">
+      <span className="chrome-text" style={{ fontSize: Math.max(15, Math.min(26, Math.round(170 / Math.max(...word.split(/\s+/).map((w) => w.length), 1)))) }}>{word.toUpperCase()}</span>
+    </span>
   );
 }
 

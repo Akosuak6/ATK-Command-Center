@@ -44,7 +44,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
   outline-offset: 2px;
 }
 h1, h2, h3, p { margin: 0; }
-.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.sr { position: absolute !important; left: 0; top: 0; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .skip { position: absolute; left: 8px; top: -60px; z-index: 50; background: var(--navy); color: #fff; padding: 12px 16px; border-radius: 10px; }
 .skip:focus { top: 8px; }
 
@@ -350,3 +350,76 @@ dialog.sheet::backdrop { background: rgba(15, 26, 46, 0.45); }
 .card > .btn-text, .card > div > .btn-text:only-child { align-self: flex-start; }
 .card > .btn-text { margin-left: -8px; }
 .trend-p { white-space: nowrap; }
+
+/* Photo grid (Pinterest style) */
+.photo-grid { columns: 4 200px; column-gap: 14px; }
+.photo-grid > * { break-inside: avoid; margin-bottom: 18px; }
+@media (max-width: 760px) { .photo-grid { columns: 2; column-gap: 10px; } .photo-grid > * { margin-bottom: 14px; } }
+.photo-card { display: flex; flex-direction: column; gap: 8px; width: 100%; background: transparent; border: none; padding: 0; text-align: left; color: var(--ink); cursor: pointer; font: inherit; }
+.photo-media { position: relative; display: block; width: 100%; border-radius: 12px; overflow: hidden; background: var(--track); border: none; padding: 0; cursor: pointer; }
+.photo-media img { display: block; width: 100%; height: auto; }
+.photo-card:hover .photo-media, .photo-media:hover { box-shadow: 0 6px 18px rgba(15, 26, 46, 0.18); }
+.photo-pill { position: absolute; left: 8px; font-size: 10px; font-weight: 600; letter-spacing: 0.04em; padding: 4px 8px; border-radius: 999px; background: rgba(243, 238, 230, 0.94); color: var(--navy); }
+.photo-pill.top { top: 8px; }
+.photo-pill.bottom { top: 8px; left: auto; right: 8px; background: var(--navy); color: var(--cream); }
+.photo-cap { display: flex; flex-direction: column; gap: 4px; padding: 0 2px; }
+.photo-cap strong { font-size: 14px; line-height: 1.3; }
+.photo-notes { font-size: 13px; line-height: 1.45; color: var(--ink-2); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.photo-ph { display: flex; align-items: flex-end; padding: 14px; width: 100%; background-image: repeating-linear-gradient(90deg, transparent 0 16px, rgba(233, 225, 210, 0.07) 16px 32px); }
+.photo-ph .chrome-text { font-family: var(--serif); font-size: 26px; letter-spacing: 0.1em; line-height: 1.05; overflow-wrap: anywhere; }
+
+/* Image picker */
+.img-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.img-actions .btn2 { flex: 1 1 140px; }
+.img-preview { display: flex; align-items: flex-end; gap: 10px; }
+.img-preview img { width: 96px; height: 96px; object-fit: cover; border-radius: 10px; border: 1px solid var(--border); }
+.paste-zone { min-height: 52px; border: 1.5px dashed var(--border-2); border-radius: 10px; padding: 14px 12px; font-size: 16px; background: var(--card); color: var(--ink); -webkit-user-select: text; user-select: text; overflow: hidden; }
+.paste-zone:empty::before { content: attr(data-placeholder); color: var(--muted); }
+.paste-zone:focus { outline: 2px solid var(--navy-2); outline-offset: 2px; border-style: solid; }
+
+/* Charts */
+.chart { position: relative; width: 100%; }
+.chart svg { display: block; overflow: visible; }
+.chart .grid { stroke: var(--divider); stroke-width: 1; }
+.chart .ref { stroke: var(--border-2); stroke-width: 1; }
+.chart .cross { stroke: var(--muted); stroke-width: 1; }
+.chart .tick { font-size: 11px; fill: var(--muted); font-family: var(--sans); }
+.chart .ref-label { font-size: 11px; fill: var(--ink-2); font-family: var(--sans); font-weight: 600; }
+.chart .dot { stroke: var(--card); stroke-width: 2; }
+.chart-tip { position: absolute; top: -6px; transform: translateX(-50%); background: var(--navy); color: var(--cream); font-size: 12px; padding: 6px 10px; border-radius: 8px; white-space: nowrap; pointer-events: none; }
+.chart-tip span { color: var(--cream-2); }
+.chart-note { margin-top: 4px; }
+.stackbar { display: flex; gap: 2px; height: 22px; }
+.stackbar-seg { display: block; min-width: 6px; height: 100%; }
+.stackbar-seg:first-child { border-radius: 4px 0 0 4px; }
+.stackbar-seg:last-child { border-radius: 0 4px 4px 0; }
+.stackbar-seg:only-child { border-radius: 4px; }
+.legend { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: 8px 16px; }
+.legend li { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.swatch { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+.legend-name { flex: 1; }
+.legend-val { font-weight: 600; }
+
+/* Social visuals */
+.trip-tile.has-photo { background-size: cover; background-position: center; }
+.ticket-thumb { float: right; width: 56px; height: 56px; object-fit: cover; border-radius: 6px; margin-left: 8px; }
+.avatar { width: 40px; height: 40px; border-radius: 20px; object-fit: cover; flex: none; }
+.avatar-ph { display: inline-flex; align-items: center; justify-content: center; background: var(--navy); color: var(--cream); font-size: 13px; font-weight: 600; }
+
+/* Phone: swipeable trend cards and a slim banner outside Home */
+@media (max-width: 760px) {
+  .trend-grid { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 10px; margin: 0 -16px; padding: 0 16px 4px; scrollbar-width: none; }
+  .trend-grid::-webkit-scrollbar { display: none; }
+  .trend { flex: 0 0 84%; scroll-snap-align: start; scroll-margin-left: 16px; }
+  .cover.slim { min-height: 0; padding: 18px 18px 14px; gap: 4px; }
+  .cover.slim .lbl, .cover.slim .cover-sub, .cover.slim .cover-art { display: none; }
+  .cover.slim h1 { font-size: 28px; letter-spacing: 0.18em; }
+}
+/* Sheets: header stays put, body scrolls, buttons always reachable */
+dialog.sheet[open] { display: flex; flex-direction: column; overflow: hidden; }
+.sheet-inner { flex: 1 1 auto; min-height: 0; max-height: none; }
+.sheet-body { flex: 1 1 auto; min-height: 0; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+/* Keep wide scrollers (trend row, subtabs) from stretching the page on phones */
+.stack > *, .stack-s > *, .main > * { min-width: 0; }
+.main { overflow-x: clip; }
+.trend-grid, .trend { position: relative; }

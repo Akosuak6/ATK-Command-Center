@@ -3,11 +3,12 @@ import type { Table } from 'dexie';
 import { Sheet } from './ui';
 import { IconTrash } from './Icons';
 import { uid } from '../lib/db';
+import { ImagePicker } from './ImagePicker';
 
 export interface FieldDef<T> {
   key: keyof T & string;
   label: string;
-  type?: 'text' | 'number' | 'date' | 'select' | 'textarea' | 'checkbox';
+  type?: 'text' | 'number' | 'date' | 'select' | 'textarea' | 'checkbox' | 'image';
   options?: { value: string; label: string }[];
   wide?: boolean;
   placeholder?: string;
@@ -35,7 +36,7 @@ export function ListEditor<T extends { id: string }>({ title, open, onClose, row
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const change = (id: string, key: keyof T, raw: string | boolean, type?: string) => {
+  const change = (id: string, key: keyof T, raw: string | boolean | undefined, type?: string) => {
     const value = type === 'number' ? (raw === '' ? 0 : Number(raw)) : raw;
     setDraft((list) => {
       const next = list.map((r) => (r.id === id ? { ...r, [key]: value } : r));
@@ -54,6 +55,13 @@ export function ListEditor<T extends { id: string }>({ title, open, onClose, row
             {fields.map((f) => {
               const id = `ed-${row.id}-${f.key}`;
               const v = row[f.key] as unknown;
+              if (f.type === 'image') {
+                return (
+                  <div className="form-col wide" key={f.key}>
+                    <ImagePicker id={id} label={f.label} value={v as string | undefined} onChange={(src) => change(row.id, f.key, src)} />
+                  </div>
+                );
+              }
               return (
                 <div className={`form-col${f.wide || f.type === 'textarea' ? ' wide' : ''}`} key={f.key}>
                   <label className="lbl" htmlFor={id}>{f.label}</label>

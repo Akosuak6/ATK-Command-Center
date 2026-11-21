@@ -6,6 +6,7 @@ import { affordCheck, budgetSpent, planTrip, savingsStatus, tripMonthly } from '
 import type { Account, Bill, BudgetCategory, MoneySnapshot, RoadmapItem, SavingsGoal, Trim, Trip, TripStatus } from '../lib/types';
 import { Bar, Chips, EditButton, FileButton, useToast } from '../components/ui';
 import { ListEditor, TableEditor, type FieldDef } from '../components/ListEditor';
+import { ProjectionChart, SERIES, SERIES_OTHER, StackedBar, type Segment } from '../components/Charts';
 
 const EMPTY_SNAP: MoneySnapshot = {
   asOf: '', leftToSpend: 0, savingsRate: 0, savingsTarget: 25, netWorth: 0, netWorthChange: 0, cardDue: '', cardAmount: 0, autopay: true, transactions: 0, covers: ''
@@ -203,31 +204,55 @@ export function MoneyGoals() {
   const allSaved = trips.reduce((a, t) => a + t.saved, 0);
   const allCost = trips.reduce((a, t) => a + t.cost, 0);
   const allMonthly = trips.reduce((a, t) => a + tripMonthly(t), 0);
+  const lastTrip = trips.reduce((d, t) => (t.date > d ? t.date : d), '');
   const tripPct = pct(allSaved, allCost);
 
+  // Fixed color order: first savings goals, then trips. Anything past three folds into Other.
+  const entities = [
+    ...savings.map((g) => ({ key: g.id, label: g.name.split(',')[0], monthly: g.monthly })),
+    { key: 'trips', label: 'Trip funds', monthly: Math.round(allMonthly) }
+  ];
+  const colorFor = (i: number) => SERIES[i] ?? SERIES_OTHER;
+  const segments: Segment[] = entities.slice(0, 3).map((e, i) => ({ label: e.label, value: e.monthly, color: colorFor(i) }));
+  const rest = entities.slice(3).reduce((a, e) => a + e.monthly, 0);
+  if (rest > 0) segments.push({ label: 'Other goals', value: rest, color: SERIES_OTHER });
+  const total = segments.reduce((a, x) => a + x.value, 0);
+
   return (
-    <div className="grid2">
-      <section className="card" aria-labelledby="sav-h">
-        <div className="row"><h2 className="h2" id="sav-h">Savings goals</h2><span className="sub">Monthly contributions</span></div>
-        <div className="stack-s" style={{ gap: 12 }}>
-          {savings.map((g) => {
-            const s = savingsStatus(g);
-            return (
-              <div className="goal" key={g.id}>
-                <div className="row"><span className="goal-t">{g.name}</span><span className={s.behind ? 'pct bad-text' : 'pct'}>{s.behind ? 'Behind' : `${s.pct}%`}</span></div>
-                <Bar value={s.pct} warn={s.behind} />
-                <span className="sub">{s.label}</span>
-              </div>
-            );
-          })}
-          <div className="goal">
-            <div className="row"><a className="goal-t" href={hrefFor('money', 'trips')} style={{ color: 'inherit' }}>Trip funds, all trips</a><span className="pct">{tripPct}%</span></div>
-            <Bar value={tripPct} />
-            <span className="sub">{money(allSaved)} of {money(allCost)} across {trips.length} trips · {money(allMonthly)} a month</span>
-          </div>
-        </div>
-        <EditButton label="Edit savings goals" onClick={() => setEdit('savings')} />
+    <div className="stack">
+      <section className="card" aria-labelledby="plan-h">
+        <div className="row row-wrap"><h2 className="h2" id="plan-h">Where your monthly savings go</h2><span className="num" style={{ fontSize: 26 }}>{money(total)}<span className="unit">a month</span></span></div>
+        <StackedBar label="Monthly savings plan" segments={segments} />
       </section>
+
+      <div className="row row-wrap" style={{ alignItems: 'center' }}>
+        <h2 className="h2">Savings goals</h2>
+        <EditButton label="Edit savings goals" onClick={() => setEdit('savings')} />
+      </div>
+      <div className="grid2">
+        {savings.map((g, i) => {
+          const st = savingsStatus(g);
+          return (
+            <section className="card" key={g.id} aria-labelledby={`sg-${g.id}`}>
+              <div className="row">
+                <span className="goal-t" id={`sg-${g.id}`} style={{ fontSize: 15 }}>{g.name}</span>
+                <span className={st.behind ? 'pct bad-text' : 'pct'}>{st.behind ? `Behind, ${st.pct}%` : `${st.pct}%`}</span>
+              </div>
+              <ProjectionChart title={g.name} saved={g.saved} target={g.target} monthly={g.monthly} due={g.due} color={colorFor(i)} />
+              <span className="sub">{st.label}</span>
+            </section>
+          );
+        })}
+        <section className="card" aria-labelledby="sg-trips">
+          <div className="row">
+            <a className="goal-t" id="sg-trips" href={hrefFor('money', 'trips')} style={{ color: 'inherit', fontSize: 15 }}>Trip funds, all trips</a>
+            <span className="pct">{tripPct}%</span>
+          </div>
+          <ProjectionChart title="Trip funds" saved={allSaved} target={allCost} monthly={allMonthly} due={lastTrip} color={colorFor(savings.length)} />
+          <span className="sub">{money(allSaved)} of {money(allCost)} across {trips.length} trips · {money(allMonthly)} a month</span>
+        </section>
+      </div>
+
       <section className="card" aria-labelledby="road-h">
         <div className="row"><h2 className="h2" id="road-h">Long term roadmap</h2><span className="sub">Next 5 years</span></div>
         <div>
@@ -261,7 +286,8 @@ const tripFields: FieldDef<Trip>[] = [
   { key: 'date', label: 'Trip date', type: 'date' },
   { key: 'cost', label: 'Total cost', type: 'number' },
   { key: 'saved', label: 'Saved so far', type: 'number' },
-  { key: 'months', label: 'Months until the trip', type: 'number' }
+  { key: 'months', label: 'Months until the trip', type: 'number' },
+  { key: 'photo', label: 'Cover photo for the vision board', type: 'image' }
 ];
 const trimFields: FieldDef<Trim>[] = [
   { key: 'order', label: 'Rank', type: 'number' },
@@ -332,6 +358,7 @@ export function TripPlanner({ tripId }: { tripId?: string }) {
             <div className="row"><span className="goal-t">Trip fund</span><span className="pct">{money(trip.saved)} of {money(trip.cost)} saved</span></div>
             <Bar value={pct(trip.saved, trip.cost)} />
           </div>
+          <ProjectionChart title={trip.name} saved={trip.saved} target={trip.cost} monthly={plan.need} due={trip.date} />
         </div>
         <div className="trip-col" style={{ gap: 10 }}>
           <div className="row"><span className="lbl">Set aside each month</span><span style={{ fontFamily: 'var(--serif)', fontSize: 30, fontWeight: 500 }}>{money(plan.need)}</span></div>

@@ -157,25 +157,32 @@ export function readFileAsDataURL(file: File): Promise<string> {
 }
 
 // Resize a photo to about 640px wide JPEG before storing it.
-export async function resizePhoto(file: File, maxWidth = 640, quality = 0.75): Promise<string> {
-  const src = await readFileAsDataURL(file);
-  const img = new Image();
-  await new Promise<void>((resolve, reject) => {
-    img.onload = () => resolve();
-    img.onerror = () => reject(new Error('Could not read that image'));
-    img.src = src;
-  });
-  const scale = Math.min(1, maxWidth / img.width);
-  const c = document.createElement('canvas');
-  c.width = Math.round(img.width * scale);
-  c.height = Math.round(img.height * scale);
-  const ctx = c.getContext('2d');
-  if (!ctx) return src;
-  ctx.fillStyle = '#FFFFFF';
-  ctx.fillRect(0, 0, c.width, c.height);
-  ctx.drawImage(img, 0, 0, c.width, c.height);
-  return c.toDataURL('image/jpeg', quality);
+export async function resizeBlob(blob: Blob, maxWidth = 640, quality = 0.78): Promise<string> {
+  if (!blob.type.startsWith('image/') && blob.type !== '') throw new Error('That file is not an image');
+  const url = URL.createObjectURL(blob);
+  try {
+    const img = new Image();
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error('Could not read that image'));
+      img.src = url;
+    });
+    const scale = Math.min(1, maxWidth / img.naturalWidth);
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(img.naturalWidth * scale));
+    c.height = Math.max(1, Math.round(img.naturalHeight * scale));
+    const ctx = c.getContext('2d');
+    if (!ctx) throw new Error('Could not read that image');
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, c.width, c.height);
+    ctx.drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL('image/jpeg', quality);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
+
+export const resizePhoto = (file: File, maxWidth = 640, quality = 0.78) => resizeBlob(file, maxWidth, quality);
 
 export async function openDataUrl(dataUrl: string) {
   const blob = await (await fetch(dataUrl)).blob();

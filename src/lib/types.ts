@@ -38,6 +38,7 @@ export interface FitnessClass {
   price: number;
   rating: number;
   notes: string;
+  photo?: string; // JPEG data URL, or an image URL if it could not be copied
 }
 
 export interface Priority { id: string; text: string; done: boolean; date: string }
@@ -52,7 +53,7 @@ export interface Pin {
 }
 
 export type RestaurantList = 'Want to try' | 'Been, loved it';
-export interface Restaurant { id: string; name: string; cuisine: string; hood: string; list: RestaurantList }
+export interface Restaurant { id: string; name: string; cuisine: string; hood: string; list: RestaurantList; photo?: string }
 
 export interface ShowEvent {
   id: string;
@@ -63,7 +64,7 @@ export interface ShowEvent {
 }
 
 export type TripStatus = 'Booked' | 'Planning' | 'Dreaming';
-export interface Trip { id: string; name: string; cost: number; months: number; saved: number; status: TripStatus; date: string }
+export interface Trip { id: string; name: string; cost: number; months: number; saved: number; status: TripStatus; date: string; photo?: string }
 
 export interface Trim { id: string; order: number; label: string; how: string; cap: number }
 
@@ -100,7 +101,7 @@ export interface Habit { id: string; order: number; name: string; done: string[]
 
 export interface WishItem { id: string; text: string; tag: 'Book' | 'Try' | 'Buy' | 'Schedule'; done: boolean }
 
-export interface Person { id: string; name: string; lastContact: string; note: string }
+export interface Person { id: string; name: string; lastContact: string; note: string; photo?: string }
 
 export interface CalendarEvent { id: string; date: string; time: string; title: string; area: Area }
 

@@ -91,7 +91,7 @@ export default function App() {
           {search('gsearch2')}
         </div>
 
-        <section aria-label="Page cover" className="cover">
+        <section aria-label="Page cover" className={`cover${def.id === 'home' ? '' : ' slim'}`}>
           <div className="cover-stripe" aria-hidden="true" />
           <svg className="cover-art" aria-hidden="true" width="300" height="170" viewBox="0 0 300 170">
             <path d="M30 170 V100 a45 45 0 0 1 90 0 V170" fill="none" stroke="#BDB2A0" strokeWidth="2" />

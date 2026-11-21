@@ -30,6 +30,16 @@ export default defineConfig({
         navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
           {
+            // Photos linked from other sites (when they could not be copied in) stay viewable offline.
+            urlPattern: ({ request, sameOrigin }) => request.destination === 'image' && !sameOrigin,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'linked-images',
+              expiration: { maxEntries: 300, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] }
+            }
+          },
+          {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'StaleWhileRevalidate',
             options: { cacheName: 'google-fonts-css' }
