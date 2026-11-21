@@ -78,6 +78,15 @@ export class CommandCenterDB extends Dexie {
       }
       if (data.meta?.facial && !(await tx.table('meta').get('facial'))) await tx.table('meta').put({ key: 'facial', value: data.meta.facial });
     });
+    // Version 4: fill in visit counts for seed studios that are still at 0, and add any new seed studios.
+    this.version(4).stores({}).upgrade(async (tx) => {
+      const rows = (seed as { studios?: Studio[] }).studios ?? [];
+      for (const r of rows) {
+        const cur = (await tx.table('studios').get(r.id)) as Studio | undefined;
+        if (!cur) await tx.table('studios').add(r);
+        else if (!cur.pastVisits && r.pastVisits) await tx.table('studios').update(r.id, { pastVisits: r.pastVisits });
+      }
+    });
     this.on('populate', (tx) => {
       const data = resolveTokens(seed, todayISO()) as Record<string, unknown>;
       for (const [name, rows] of Object.entries(data)) {
