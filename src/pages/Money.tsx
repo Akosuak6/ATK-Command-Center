@@ -351,7 +351,9 @@ export function MoneyGoals() {
   const KIND_LABEL: Record<string, string> = { retirement: 'Retirement', savings: 'Savings', brokerage: 'Brokerage', other: 'Other goals' };
   const kindOf = (g: SavingsGoal) => g.kind ?? (/401|ira|roth|retire/i.test(g.name) ? 'retirement' : /brokerage|invest/i.test(g.name) ? 'brokerage' : 'savings');
   const payroll = savings.filter((g) => g.contributing !== false && g.fromPaycheck);
-  const active = savings.filter((g) => g.contributing !== false && !g.fromPaycheck);
+  const isFull = (g: SavingsGoal) => g.target > 0 && g.saved >= g.target && !g.monthly;
+  const full = savings.filter((g) => g.contributing !== false && !g.fromPaycheck && isFull(g));
+  const active = savings.filter((g) => g.contributing !== false && !g.fromPaycheck && !isFull(g));
   const byKind = (k: string) => active.filter((g) => kindOf(g) === k).reduce((a, g) => a + g.monthly, 0) + (k === 'savings' ? Math.round(allMonthly) : 0);
   const segments: Segment[] = [
     { label: 'Retirement', value: byKind('retirement'), color: SERIES[0] },
@@ -390,6 +392,9 @@ export function MoneyGoals() {
               </li>
             )}
           </ol>
+          {full.map((g) => (
+            <p className="sub" key={g.id} style={{ marginTop: 8 }}><strong className="good-text">{g.name} is full</strong> at {money(g.saved)}, so nothing new goes in.</p>
+          ))}
           {payroll.map((g) => (
             <p className="sub" key={g.id} style={{ marginTop: 8 }}><strong>Before your paycheck: {g.name} {money(g.monthly)} a month.</strong>{g.note ? ` ${g.note}` : ''}</p>
           ))}
