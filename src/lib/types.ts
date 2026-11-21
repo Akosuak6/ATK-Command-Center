@@ -107,7 +107,7 @@ export interface Goal {
   achieved: boolean;
 }
 
-export interface BudgetCategory { id: string; order: number; label: string; budget: number; spent: number; source: 'manual' | 'classes' | 'export' | 'fixed' } // fixed: a set bill like rent, counted as paid each month
+export interface BudgetCategory { id: string; order: number; label: string; budget: number; spent: number; source: 'manual' | 'classes' | 'export' | 'fixed'; credit?: number; note?: string } // credit: paid back by work each month // fixed: a set bill like rent, counted as paid each month
 
 // One row from a Rocket Money export. amount > 0 is money out, amount < 0 is money in.
 export interface Transaction {

@@ -194,7 +194,9 @@ const budgetFields: FieldDef<BudgetCategory>[] = [
   { key: 'label', label: 'Category' },
   { key: 'budget', label: 'Monthly budget', type: 'number' },
   { key: 'spent', label: 'Spent so far (manual only)', type: 'number' },
-  { key: 'source', label: 'Spent comes from', type: 'select', options: [{ value: 'manual', label: 'Entered by me' }, { value: 'export', label: 'Rocket Money export' }, { value: 'fixed', label: 'Fixed bill, paid every month' }, { value: 'classes', label: 'Health class log' }] }
+  { key: 'source', label: 'Spent comes from', type: 'select', options: [{ value: 'manual', label: 'Entered by me' }, { value: 'export', label: 'Rocket Money export' }, { value: 'fixed', label: 'Fixed bill, paid every month' }, { value: 'classes', label: 'Health class log' }] },
+  { key: 'credit', label: 'Paid back by work each month (like a wellness credit)', type: 'number' },
+  { key: 'note', label: 'Note', wide: true }
 ];
 
 export function useImpactGoals() {
@@ -231,7 +233,7 @@ export function MoneyBudget() {
 
   return (
     <div className="grid2">
-      <SavingsFirst plan={plan} budgetTotal={budgetTotal} usualTotal={budget.reduce((a, c) => a + (c.source === 'export' ? usual[c.label] ?? 0 : 0), 0)} budgetedExport={budget.reduce((a, c) => a + (c.source === 'export' ? c.budget : 0), 0)} onEdit={() => setEditPlan(true)} />
+      <SavingsFirst plan={plan} budgetTotal={budgetTotal - budget.reduce((a, c) => a + (c.credit ?? 0), 0)} usualTotal={budget.reduce((a, c) => a + (c.source === 'export' ? usual[c.label] ?? 0 : 0), 0)} budgetedExport={budget.reduce((a, c) => a + (c.source === 'export' ? c.budget : 0), 0)} onEdit={() => setEditPlan(true)} />
       <ListEditor<SavingsPlan & { id: string }>
         title="Savings plan" open={editPlan} onClose={() => setEditPlan(false)} rows={[{ id: 'plan', ...plan }]}
         fields={[{ key: 'takeHome', label: 'Take home pay a month', type: 'number' }, { key: 'saveFirst', label: 'Set aside first each month', type: 'number' }]}
@@ -251,6 +253,8 @@ export function MoneyBudget() {
               {c.source === 'classes' && <span className="sub">Pulled from your class log, {monthClasses} classes this month</span>}
               {c.source === 'export' && <span className="sub">From your Rocket Money export</span>}
               {c.source === 'fixed' && <span className="sub">Fixed each month</span>}
+              {c.credit ? <span className="sub good-text">Includes a {money(c.credit)} credit from work, so {money(Math.max(0, c.budget - c.credit))} comes from your pay</span> : null}
+              {c.note && <span className="sub">{c.note}</span>}
             </div>
           ))}
         </div>
@@ -673,7 +677,7 @@ function SavingsFirst({ plan, budgetTotal, usualTotal, budgetedExport, onEdit }:
       <div className="plan-flow">
         <div><span className="lbl">Take home</span><span className="num">{money(plan.takeHome)}</span></div>
         <div><span className="lbl">Save first</span><span className="num good-text">{money(plan.saveFirst)}</span></div>
-        <div><span className="lbl">Spending budget</span><span className="num">{money(budgetTotal)}</span></div>
+        <div><span className="lbl">Spending from your pay</span><span className="num">{money(budgetTotal)}</span></div>
         <div><span className="lbl">{rest >= 0 ? 'Left over' : 'Short'}</span><span className={`num${rest < 0 ? ' bad-text' : ''}`}>{money(Math.abs(rest))}</span></div>
       </div>
       {cut > 0 && <p className="note-box tone-good">This budget spends <strong>{money(cut)} less a month</strong> than you usually do, which is {money(cut * 12)} a year toward your goals.</p>}
