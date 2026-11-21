@@ -556,12 +556,14 @@ export function TripPlanner({ tripId }: { tripId?: string }) {
             <span aria-hidden="true">$</span>
             <input id="tripcost" type="number" inputMode="decimal" min={0} value={trip.cost || ''} placeholder="0" onChange={(e) => upd({ cost: Number(e.target.value) || 0, estimate: false })} />
           </div>
+          {wallet.balance > 0 && <>
           <label htmlFor="trippoints" className="lbl">{wallet.card} points to use{trip.points ? `, worth about ${money(trip.pointsValue ?? 0)}` : ''}</label>
           <div className="money-input">
             <input id="trippoints" type="number" inputMode="numeric" min={0} value={trip.points || ''} placeholder="0 points"
               onChange={(e) => { const pts = Number(e.target.value) || 0; void upd({ points: pts, pointsValue: Math.round((pts * wallet.centsPerPoint) / 100) }); }} />
           </div>
-          {wallet.balance > 0 && <span className="sub">{(wallet.balance - assignedPoints + (trip.points ?? 0)).toLocaleString('en-US')} points free to use{assignedPoints > wallet.balance ? `, ${(assignedPoints - wallet.balance).toLocaleString('en-US')} more assigned than you have` : ''}</span>}
+          <span className="sub">{(wallet.balance - assignedPoints + (trip.points ?? 0)).toLocaleString('en-US')} points free to use{assignedPoints > wallet.balance ? `, ${(assignedPoints - wallet.balance).toLocaleString('en-US')} more assigned than you have` : ''}</span>
+          </>}
           <label htmlFor="tripsaved" className="lbl">Cash saved so far</label>
           <div className="money-input">
             <span aria-hidden="true">$</span>
@@ -732,13 +734,15 @@ function TravelYear({ trips }: { trips: Trip[] }) {
       <div className="row row-wrap"><h2 className="h2" id="ty-h">Your travel year</h2><span className="sub">{upcoming.length} trips</span></div>
       <div className="plan-flow">
         <div><span className="lbl">Cash still to save</span><span className="num">{money(total)}</span></div>
-        <div><span className="lbl">Covered by points</span><span className="num">{money(ptsValue)}</span><span className="sub">{ptsUsed.toLocaleString('en-US')} of {wallet.balance.toLocaleString('en-US')} points</span></div>
+        {wallet.balance > 0 && <div><span className="lbl">Covered by points</span><span className="num">{money(ptsValue)}</span><span className="sub">{ptsUsed.toLocaleString('en-US')} of {wallet.balance.toLocaleString('en-US')} points</span></div>}
         <div><span className="lbl">Needed a month right now</span><span className="num">{money(monthlyNow)}</span></div>
         {busiest && <div><span className="lbl">Busiest month</span><span className="num" style={{ fontSize: 22 }}>{MONTHS[Number(busiest[0].slice(5)) - 1]}</span><span className="sub">{money(busiest[1])} of trips</span></div>}
       </div>
       {estimates > 0 && <p className="sub">{estimates} of these costs are my estimates. Tap a trip below and type your real cost.</p>}
-      <p className="sub">Points are valued at {wallet.centsPerPoint} cent{wallet.centsPerPoint === 1 ? '' : 's'} each, a careful number. Transfers to airline and hotel partners can be worth more.</p>
-      <div><EditButton label="Edit points balance" onClick={() => setEditWallet(true)} /></div>
+      {wallet.balance > 0
+        ? <p className="sub">Points are valued at {wallet.centsPerPoint} cent{wallet.centsPerPoint === 1 ? '' : 's'} each, a careful number. Transfers to airline and hotel partners can be worth more.</p>
+        : null}
+      <div><button type="button" className="btn-text" style={{ paddingLeft: 0 }} onClick={() => setEditWallet(true)}>{wallet.balance > 0 ? 'Edit points' : 'Using card points? Add your balance'}</button></div>
       <ListEditor<PointsWallet & { id: string }>
         title="Points" open={editWallet} onClose={() => setEditWallet(false)} rows={[{ id: 'points', ...wallet }]}
         fields={[{ key: 'card', label: 'Card' }, { key: 'balance', label: 'Points balance', type: 'number' }, { key: 'centsPerPoint', label: 'Cents each point is worth', type: 'number' }]}
