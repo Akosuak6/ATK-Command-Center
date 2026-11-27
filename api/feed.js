@@ -34,7 +34,8 @@ export default async function handler(req, res) {
   const sources = [...SOURCES.filter((s) => !skip.has(s.id)), ...customSources(decodeExtra(q.extra), safeUrl)];
   // Every source at once, each with its own time limit, so one slow site cannot hold up the rest.
   const keywords = String(q.kw || '').split('|');
-  const out = await aggregate({ sources, keywords, timeoutMs: 7000, concurrency: sources.length + 30 });
+  // Each source gets 6 seconds, so the whole refresh fits inside a serverless function's default time limit.
+  const out = await aggregate({ sources, keywords, timeoutMs: 6000, concurrency: sources.length + 30 });
   // Shared caches can keep the result for 20 minutes, so a quick reload costs nothing.
   res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=1200, stale-while-revalidate=3600');
   return res.status(200).json(out);
