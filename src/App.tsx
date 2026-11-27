@@ -9,6 +9,7 @@ import { SearchResults } from './components/Search';
 import { BackupReminder } from './pages/Settings';
 import { HomeToday, HomeGoals } from './pages/Home';
 import { DumpAll, Bookshelf } from './pages/Dump';
+import { Feed } from './pages/Feed';
 import { MoneyOverview, MoneyBudget, MoneyGoals, TripPlanner } from './pages/Money';
 import { HealthToday, HealthClasses, HealthRoutines } from './pages/Health';
 import { VisionBoard, PeoplePlans } from './pages/Social';
@@ -23,6 +24,7 @@ const PAGES: Record<string, (p: { param?: string }) => ReactNode> = {
   'home/today': () => <HomeToday />,
   'home/goals': () => <HomeGoals />,
   'dump/all': ({ param }) => <DumpAll focus={param} />,
+  'dump/feed': ({ param }) => <Feed focus={param} />,
   'dump/books': ({ param }) => <Bookshelf focus={param} />,
   'money/overview': () => <MoneyOverview />,
   'money/budget': () => <MoneyBudget />,

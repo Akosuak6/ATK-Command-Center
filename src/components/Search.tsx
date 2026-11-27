@@ -11,6 +11,7 @@ export function SearchResults({ query, onDone }: { query: string; onDone: () => 
   const classes = useTable(db.classes);
   const restaurants = useTable(db.restaurants);
   const trips = useTable(db.trips, 'date');
+  const feed = useTable(db.feed, 'date', true);
   const q = query.trim().toLowerCase();
   const has = (...parts: (string | undefined)[]) => parts.join(' ').toLowerCase().includes(q);
 
@@ -32,6 +33,12 @@ export function SearchResults({ query, onDone }: { query: string; onDone: () => 
   trips.forEach((t) => {
     if (has(t.name, t.status)) results.push({ kind: 'Trip', title: t.name, where: 'Trip planner', tag: 'tag t-money', href: hrefFor('money', 'trips', t.id) });
   });
+
+  // Feed stories come last and only the latest few, so they never crowd out your own things.
+  feed
+    .filter((f) => !f.hidden && has(f.title, f.summary, f.source, f.author))
+    .slice(0, 8)
+    .forEach((f) => results.push({ kind: f.kind === 'linkedin' ? 'LinkedIn' : 'Story', title: f.title, where: 'Feed', tag: 'tag t-plain', href: hrefFor('dump', 'feed', f.id) }));
 
   return (
     <section className="card" aria-labelledby="results-title">

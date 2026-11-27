@@ -2,6 +2,10 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import type { Connect, ViteDevServer, PreviewServer } from 'vite';
+import type { ServerResponse } from 'node:http';
 
 // Seed data = src/data/seed.json, with any table in private/seed-overlay.json replacing the sample.
 // private/ is never committed, so real data stays out of the public repo.
@@ -26,9 +30,42 @@ function seedPlugin() {
   };
 }
 
+// On the laptop, serve the functions in api/ the way Vercel does, so link previews and the feed
+// work with npm run dev and npm run preview too.
+type ApiRes = ServerResponse & { status: (code: number) => ApiRes; json: (body: unknown) => ApiRes; send: (body: unknown) => ApiRes };
+function apiPlugin() {
+  const handle = (load: (file: string) => Promise<{ default: (req: unknown, res: ApiRes) => unknown }>): Connect.NextHandleFunction =>
+    async (req, res, next) => {
+      const url = new URL(req.url ?? '/', 'http://localhost');
+      const name = /^\/api\/([a-z]+)\/?$/.exec(url.pathname)?.[1];
+      const file = name ? resolve('api', `${name}.js`) : '';
+      if (!file || !existsSync(file)) return next();
+      const r = res as ApiRes;
+      r.status = (code) => { r.statusCode = code; return r; };
+      r.json = (body) => { r.setHeader('Content-Type', 'application/json'); r.end(JSON.stringify(body)); return r; };
+      r.send = (body) => { r.end(body as Buffer); return r; };
+      try {
+        const mod = await load(file);
+        await mod.default(Object.assign(req, { query: Object.fromEntries(url.searchParams) }), r);
+      } catch (e) {
+        if (!r.headersSent) r.status(500).json({ error: String((e as Error)?.message ?? e) });
+      }
+    };
+  return {
+    name: 'command-center-api',
+    configureServer(server: ViteDevServer) {
+      server.middlewares.use(handle((f) => server.ssrLoadModule(f) as never));
+    },
+    configurePreviewServer(server: PreviewServer) {
+      server.middlewares.use(handle((f) => import(/* @vite-ignore */ pathToFileURL(f).href)));
+    }
+  };
+}
+
 export default defineConfig({
   plugins: [
     seedPlugin(),
+    apiPlugin(),
     react(),
     VitePWA({
       registerType: 'autoUpdate',
@@ -55,8 +92,19 @@ export default defineConfig({
         navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
           {
+            // Feed images ask for no referrer, which keeps them in their own small cache so a busy
+            // feed never pushes out the photos you pinned.
+            urlPattern: ({ request, sameOrigin }) => request.destination === 'image' && !sameOrigin && request.referrerPolicy === 'no-referrer',
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'feed-images',
+              expiration: { maxEntries: 250, maxAgeSeconds: 60 * 60 * 24 * 14 },
+              cacheableResponse: { statuses: [0, 200] }
+            }
+          },
+          {
             // Photos linked from other sites (when they could not be copied in) stay viewable offline.
-            urlPattern: ({ request, sameOrigin }) => request.destination === 'image' && !sameOrigin,
+            urlPattern: ({ request, sameOrigin }) => request.destination === 'image' && !sameOrigin && request.referrerPolicy !== 'no-referrer',
             handler: 'CacheFirst',
             options: {
               cacheName: 'linked-images',
