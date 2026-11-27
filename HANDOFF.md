@@ -4,7 +4,7 @@ Read this, then `BUILD_BRIEF.md`, `README.md` and `mockup-reference.html`, befor
 
 ## What is built
 
-Phases 1 to 3 of the brief are done, plus parts of 4. All on branch `claude/life-command-center-46qqa6`.
+Phases 1 to 3 of the brief are done, plus parts of 4. Since Nov 27, 2026 it is a Next.js 16 App Router app for Vercel with Neon Postgres sync and one password sign in (branch `claude/nextjs-vercel-neon`, cut from `claude/life-command-center-46qqa6`). `README.md` covers running, deploying and how sync works.
 
 - Shell: sidebar on laptop, tab bar on phone, cover banner (slim outside Home), subpage tabs, swipeable trend cards on phone, global search, Settings with backup export, import and a monthly reminder.
 - Home: flip clock, arch tiles, priorities, calendar, recently dumped (with covers), goals and life areas.
@@ -12,7 +12,7 @@ Phases 1 to 3 of the brief are done, plus parts of 4. All on branch `claude/life
 - Money: Rocket Money import (CSV or .xlsx), category mapping, payee rules and a Needs a look queue for Venmo and Zelle, transfers to own accounts and investments left out of spending, savings first budget, fixed bills (rent), employer credits on categories, grouped accounts and net worth, savings order with paycheck deductions (401k), goal projection charts with growth, Coast FIRE card and chart, trip planner with travel year summary and optional card points.
 - Health: today (recovery, rings, today's call), classes as a photo grid with studio tallies and logos (from studio websites), routines with day by day skincare and a facial buffer, supplements, habits with daily counts (water bottles), wishlist.
 - Social: vision board (trip tiles with cover photos, photo and link pins, restaurants grid, seasonal shows and tickets, intention), people and plans.
-- Serverless functions in `api/` (Vercel): `preview` (title and cover, oEmbed for YouTube and Pinterest), `image` (image proxy so covers are stored on the phone), `book`, `logo`. `_safe.js` blocks private addresses.
+- Route handlers in `app/api/`: `sync`, `login`, `logout`, plus the original functions in `src/server/handlers/` run through `src/server/adapter.ts`: `preview` (title and cover, oEmbed for YouTube, Pinterest and TikTok), `image` (image copy so covers are stored on the device), `book`, `booklist` (Claude reads the books in a TikTok), `logo`, `hevy`. `_safe.js` blocks private addresses. Every route checks the session too, not only `proxy.ts`.
 
 Not built yet: Morning sync and Send to Dump iOS Shortcuts with `SHORTCUTS.md` (hash import `#sync=` and `#dump=`), real trend history for the trend cards (they still show seed placeholders), the Work page (the owner started a new job on Nov 30, 2026, so it can open now), custom sections and subpages with a plus.
 
@@ -20,14 +20,13 @@ Not built yet: Morning sync and Send to Dump iOS Shortcuts with `SHORTCUTS.md` (
 
 The repo is public. Real data never goes in `src/data/seed.json`.
 
-- `private/seed-overlay.json` (gitignored) holds the owner's real tables and `patches`. The Vite plugin in `vite.config.ts` merges it over the sample seed as `virtual:seed`.
-- `patches` are one time corrections for phones that already have data: `set` only applies when the row still matches `from` (null means empty), `add` adds a missing row. Applied ids are stored in meta `appliedPatches`.
-- `private/command-center-starter.json` is a full backup of the real data (no sample rows). Import it in Settings to start the real app.
-- Upgrades in `src/lib/db.ts` (versions 2 to 10) swap untouched sample rows for seed rows; never overwrite rows the owner edited.
+- `private/seed-overlay.json` (gitignored) holds the owner's real tables. `npm run make-import` merges it over `src/data/seed.json` into `private/import-backup.json`, which is imported once in Settings on the deployed site and then lives in Neon.
+- The old one time `patches` and the Dexie upgrade steps are gone: every device starts empty and downloads from Neon. Dexie has a single `version(1)` with every store; add a store with a new `version(2)` and it syncs automatically (rows for stores a device does not know yet are downloaded again once it does).
+- Data entered in the old Vite version (localhost:5173) is only in that browser: export a backup there and import it on the new site.
 
 ## Owner preferences
 
-- Two looks, chosen per device in Settings, Look: **Moody** is the default (near black navy, deep navy cards, cream text, chrome kept) and **Light** is the original linen and navy. Moody is `:root[data-theme='moody']` in `src/styles.css`; `index.html` sets it before the first paint and `src/lib/theme.ts` switches it. Use the color variables, never hard coded colors, so both looks work.
+- Two looks, chosen per device in Settings, Look: **Moody** is the default (near black navy, deep navy cards, cream text, chrome kept) and **Light** is the original linen and navy. Moody is `:root[data-theme='moody']` in `src/styles.css`; `app/layout.tsx` sets it before the first paint and `src/lib/theme.ts` switches it. Fonts come from `next/font` (`--font-sans`, `--font-serif`, `--font-script`). Use the color variables, never hard coded colors, so both looks work.
 - Fonts as in the brief; no dashes or em dashes in app copy; section titles never end in a period; no emoji icons.
 - Budget is built for saving: savings come first, spending gets what is left.
 - Chart colors are the `--series-*` variables (light values validated in `src/components/Charts.tsx`, lighter tints for Moody); keep legends for two or more series.
@@ -37,8 +36,8 @@ The repo is public. Real data never goes in `src/data/seed.json`.
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173 and the network address for the phone
-npm run build && npm run preview
+npm run dev        # http://localhost:3000 and the network address for the phone
+npm run build && npm run start
 ```
 
-After changes: `npx tsc -b`, `npm run build`, and look at the pages at phone width (390px) and laptop width (1280px).
+After changes: `npm run typecheck`, `npm run build`, and look at the pages at phone width (390px) and laptop width (1280px). To test sync, open `localhost:3000` and `127.0.0.1:3000` side by side; in development `window.__cc` gives the console `db` and `sync`. Next.js 16 changed a lot: read `node_modules/next/dist/docs/` before using an API from memory (for example `middleware` is now `proxy.ts`).

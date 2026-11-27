@@ -2,15 +2,14 @@
 // -> { books: [{ title, author }], from: { title, creator, slides } }
 // Reads the books a post recommends. A TikTok link gives its photo slides (or a video's cover) and
 // caption; any other link gives the page text; screenshots are read as they are. Claude lists the books.
-// Key: the x-anthropic-key header (saved on the device), or ANTHROPIC_API_KEY while running on the laptop.
-// A deployed server never uses its own key, so nobody else can spend it before the app has a login.
+// Key: ANTHROPIC_API_KEY in Vercel (only signed in devices reach this), or the x-anthropic-key header
+// saved on a device when the server has no key.
 import Anthropic from '@anthropic-ai/sdk';
 import { fetchWithTimeout, safeUrl } from './_safe.js';
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36';
 const MAX_IMAGES = 12;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-const deployed = () => Boolean(process.env.VERCEL || process.env.RENDER || process.env.NODE_ENV === 'production');
 
 const SCHEMA = {
   type: 'object',
@@ -106,7 +105,7 @@ function fromDataUrl(s) {
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
-  const key = String(req.headers['x-anthropic-key'] || '').trim() || (deployed() ? '' : process.env.ANTHROPIC_API_KEY || '');
+  const key = String(process.env.ANTHROPIC_API_KEY || req.headers['x-anthropic-key'] || '').trim();
   if (!key) return res.status(401).json({ error: 'needs-key' });
 
   try {

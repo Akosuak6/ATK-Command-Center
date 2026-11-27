@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactElement, type ReactNode } from 'react';
 import { SECTIONS, hrefFor, sectionById, useRoute, type SectionId } from './lib/router';
 import { useMeta } from './lib/db';
 import { bannerDate, daysBetween, nextMonth, shortDate, timeOfDate, todayISO } from './lib/format';
@@ -15,8 +15,9 @@ import { HealthWorkouts } from './pages/Workouts';
 import { VisionBoard, PeoplePlans } from './pages/Social';
 import { WorkSoon } from './pages/Work';
 import { SettingsPage } from './pages/Settings';
+import { SyncLine } from './components/SyncStatus';
 
-const NAV_ICONS: Record<string, () => JSX.Element> = {
+const NAV_ICONS: Record<string, () => ReactElement> = {
   home: IconHome, dump: IconDump, money: IconMoney, health: IconHealth, social: IconSocial, work: IconWork, settings: IconSettings
 };
 
@@ -161,7 +162,7 @@ function StatusBlock() {
         <span className={`dot ${exportDot}`} />
         {exportDate ? `Rocket Money export ${shortDate(exportDate)}, ${dueIn! < 0 ? 'overdue since' : 'next due'} ${shortDate(due!)}` : 'No Rocket Money export yet'}
       </span>
-      <span className="status-line"><span className="dot" />Saved on this phone</span>
+      <SyncLine />
       <a className="status-line" href={hrefFor('settings')} style={{ minHeight: 32 }}>Settings and backups</a>
     </div>
   );

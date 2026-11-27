@@ -1,6 +1,6 @@
 # Akosua's command center
 
-A private PWA for day, money, health, social life and learning. Everything is stored on the phone in IndexedDB. There is no account, login or server database.
+A private app for day, money, health, social life and learning. Next.js 16 (App Router) on Vercel, with Neon Postgres keeping the laptop and phone in sync. Each device also keeps a full copy in IndexedDB, so it opens instantly and works without signal.
 
 See `BUILD_BRIEF.md` for the full plan and `mockup-reference.html` for the approved design.
 
@@ -8,48 +8,50 @@ See `BUILD_BRIEF.md` for the full plan and `mockup-reference.html` for the appro
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173, also on your Wi-Fi network for testing on the phone
-npm run build      # production build in dist/
-npm run preview    # serve the build (service worker and offline mode work here)
+npm run dev        # http://localhost:3000, also on your Wi-Fi network for the phone
+npm run build      # production build
+npm run start      # serve the build (the service worker and offline mode work here)
 ```
 
-## Your real data
+Without `DATABASE_URL`, `npm run dev` stores synced rows in PGlite (Postgres in the dev server, saved in `private/pglite`), so sync can be tested between two browsers: `localhost:3000` and `127.0.0.1:3000` count as separate devices. Without `APP_PASSWORD`, `npm run dev` needs no sign in.
 
-`src/data/seed.json` is loaded once, on the very first launch on a device. It holds placeholder values from the mockup. Before deploying, replace them with your real budget, savings goals, trips, routines, books, restaurants and so on, and set `meta.sampleData` to `false` (that removes the "Sample data" label in the banner).
+## Settings in Vercel (Environment Variables)
 
-Dates can be ISO (`2027-04-10`) or relative to the first launch (`@day-3`, `@day+2`).
-
-After the first launch, the seed is never read again. Edit things in the app (every card has an Edit link), or use Settings, Erase and start over, to reload the seed.
+| Name | What it is |
+| --- | --- |
+| `DATABASE_URL` | Set for you when Neon is added in the Vercel Storage tab. |
+| `APP_PASSWORD` | The one password for signing in. Required: a deploy without it stays locked. Changing it signs every device out. |
+| `ANTHROPIC_API_KEY` | Optional. Lets the Bookshelf read the books in a TikTok. |
+| `HEVY_API_KEY` | Optional. Hevy workouts without pasting the key on each device. |
+| `SESSION_SECRET` | Optional. Signs the sign in cookie; made from the password and database address when unset. |
 
 ## Deploy (Vercel)
 
-1. Push this repo to GitHub and import it in Vercel. Framework preset: Vite. Build command `npm run build`, output `dist`.
-2. Open the URL on the iPhone in Safari, tap Share, then Add to Home Screen.
+1. Push this repo to GitHub, then in Vercel: Add New, Project, import it. The framework is detected as Next.js. Set the production branch in Settings, Git.
+2. Storage tab: add Neon and connect it to the project (this sets `DATABASE_URL`).
+3. Settings, Environment Variables: add `APP_PASSWORD` (and the optional ones), then redeploy.
+4. Load your data once: run `npm run make-import` on the laptop, open the site, sign in, then Settings, Import backup, and pick `private/import-backup.json`. It syncs to Neon from there.
+5. On the iPhone: open the site in Safari, sign in, tap Share, then Add to Home Screen.
 
-Netlify works the same way (build `npm run build`, publish `dist`).
+## How sync works
 
-## Link previews and covers
+- Every write on a device marks that row as changed (kept in localStorage, so closing the app loses nothing).
+- A sync sends the changed rows to `/api/sync`, then downloads what other devices changed since last time. It runs on open, when the app comes back to the front, when the connection returns, a moment after each edit, and every minute while open.
+- In Neon every row of every store lives in one table, `cc_rows` (store, id, data as JSON, edit time, a running change number). When the same row was edited in two places, the most recent edit wins.
+- A new device shows "Downloading your data" until its first sync finishes.
 
-`api/preview.js` reads a link's title and cover image, and `api/image.js` downloads the cover so the phone keeps its own copy (it still shows offline). Vercel runs both automatically from the `api/` folder. Without them, links still save, titled from the URL, and you can add a cover by hand with Edit.
+## Your real data
 
-## Backups
-
-Data lives only on the phone, so use Settings, Export backup about once a month. The app reminds you after 30 days. Import backup restores everything, including photos and tickets.
+The repo is public, so real data never goes in `src/data/seed.json` (it only has placeholders). Your real tables are in `private/seed-overlay.json` (gitignored). `npm run make-import` merges the two into `private/import-backup.json` to import once, as above. After that, Neon holds everything.
 
 ## Structure
 
-- `src/lib/db.ts` Dexie database, stores, seed loading, backup export and import
-- `src/lib/calc.ts` afford check, trip planner, recovery estimate, goal progress, life area scores
-- `src/lib/router.ts` sections, subpages and hash routes (`#/money/trips/lisbon`)
-- `src/pages/*` one file per section
-- `src/components/ListEditor.tsx` the edit sheet used by every editable list
-- `scripts/make-icons.mjs` renders the home screen icons and iPhone splash screens
-
-## Phases
-
-1. App shell, pages, manual entry, PWA, IndexedDB with seed data. Done.
-2. Rocket Money CSV import, category mapping, live budget, afford check and trip trims from real spending.
-3. Morning sync and Send to Dump Shortcuts (`SHORTCUTS.md`), link preview function at `api/preview`.
-4. Trend history and period comparisons, accessibility pass.
-
-Already in from later phases: global search, backup export and import with a monthly reminder. The trend cards show placeholder numbers from the seed until phase 4.
+- `app/` routes: the app page, `login`, `api/*` route handlers, the manifest
+- `proxy.ts` sends anyone not signed in to the sign in page (API calls get a 401)
+- `src/Shell.tsx` starts the database, sync and daily history, and registers `public/sw.js`
+- `src/lib/db.ts` Dexie stores, backup export and import
+- `src/lib/sync.ts` the device side of sync; `src/server/store.ts` the Neon side
+- `src/server/handlers/*` link previews, image and logo copies, book lookup, TikTok book lists, Hevy; run through `src/server/adapter.ts`
+- `src/lib/router.ts` sections, subpages and hash routes (`#/money/trips/ethiopia-2027`), so moving around needs no server
+- `src/pages/*` one file per section (plain components; the empty root `pages/` folder keeps Next.js from treating them as routes)
+- `scripts/make-icons.mjs` renders the home screen icons and iPhone splash screens; `scripts/make-import.mjs` builds the import file

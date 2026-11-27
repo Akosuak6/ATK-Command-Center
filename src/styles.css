@@ -24,9 +24,9 @@
   --chrome-edge: #AEB6C2;
   --chrome: linear-gradient(180deg, #FFFFFF 0%, #DDE1E7 40%, #AEB6C2 52%, #E8EBEF 100%);
   --chrome-text: linear-gradient(180deg, #FFFFFF 0%, #D9DEE5 45%, #9BA4B1 55%, #F2F4F7 100%);
-  --serif: Newsreader, Georgia, serif;
-  --sans: Inter, system-ui, -apple-system, sans-serif;
-  --script: 'Pinyon Script', cursive;
+  --serif: var(--font-serif), Newsreader, Georgia, serif;
+  --sans: var(--font-sans), Inter, system-ui, -apple-system, sans-serif;
+  --script: var(--font-script), 'Pinyon Script', cursive;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-top: env(safe-area-inset-top, 0px);
   --surface-2: #EAE4D9; /* raised boxes inside cards */
@@ -633,3 +633,12 @@ dialog.sheet[open] { display: flex; flex-direction: column; overflow: hidden; }
 .stack-count { position: absolute; right: 8px; bottom: 8px; padding: 5px 10px; border-radius: 999px; background: var(--navy); color: var(--cream); font-size: 11px; font-weight: 700; letter-spacing: 0.04em; box-shadow: 0 0 0 1px var(--chrome-edge); }
 .stack-fold { display: flex; flex-direction: column; gap: 4px; width: 100%; padding: 14px 16px; border-radius: 12px; border: 1px dashed var(--border-2); background: var(--surface-3); color: var(--ink); text-align: left; cursor: pointer; font: inherit; }
 .photo-notes.full { -webkit-line-clamp: unset; display: block; }
+
+/* Loading screen and sign in page */
+.boot { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; background: var(--bg); }
+.boot .brand-name { color: var(--ink); }
+.boot-msg { margin-top: 14px; }
+.login { min-height: 100vh; min-height: 100dvh; display: flex; align-items: center; justify-content: center; padding: 24px 16px; background: var(--bg); }
+.login-card { width: 100%; max-width: 380px; gap: 12px; }
+.login-brand { display: flex; flex-direction: column; margin-bottom: 8px; }
+.login-brand .brand-name { color: var(--ink); }
