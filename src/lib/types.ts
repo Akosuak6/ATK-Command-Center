@@ -271,3 +271,57 @@ export interface DaySnapshot {
   dump: { total: number; watchlist: number };
   people: Record<string, string>; // person id -> last contact date
 }
+
+// Home plan: goals set for one week, month, quarter or year. period is a key from plan.ts, like W:2026-11-23.
+export type Horizon = 'week' | 'month' | 'quarter' | 'year';
+export interface PeriodGoal { id: string; period: string; text: string; done: boolean; order: number }
+
+// Bucket list, on Home because it reaches into travel, books, food, fitness and money.
+export type BucketCategory = 'Travel' | 'Food' | 'Experiences' | 'Books' | 'Fitness' | 'Money' | 'Learning' | 'Other';
+export interface BucketItem {
+  id: string;
+  title: string;
+  category: BucketCategory;
+  done: boolean;
+  doneOn?: string; // the day you crossed it off
+  by?: string; // optional date you want it done by
+  note?: string;
+  photo?: string;
+  link?: string; // what it became elsewhere: trip:<id>, book:<id> or restaurant:<id>
+  date: string; // day added
+}
+
+// Work contacts: a small CRM for keeping professional relationships warm.
+export type Industry = 'Healthcare' | 'Startups' | 'Investment banking' | 'Venture capital' | 'Private equity' | 'Consulting' | 'Other';
+export type ContactMethod = 'Email' | 'Text' | 'Call' | 'LinkedIn' | 'Coffee' | 'Meeting' | 'Event' | 'Other';
+export interface ContactTouch { date: string; method: ContactMethod; note?: string }
+export interface Contact {
+  id: string;
+  first: string;
+  last: string;
+  email?: string;
+  phone?: string;
+  linkedin?: string;
+  company?: string;
+  role?: string;
+  industries: Industry[];
+  lastContact?: string; // the most recent catch up
+  method?: ContactMethod; // how that catch up happened
+  log?: ContactTouch[]; // every catch up you logged, newest first
+  every?: number; // days between check ins before they show as due (default 90)
+  note?: string;
+  date: string; // day added
+}
+
+// Doctor reminders on Health: yearly checkups (due a year after the last visit) and one time to dos.
+export interface CareItem {
+  id: string;
+  order: number;
+  title: string;
+  kind: 'yearly' | 'todo';
+  last?: string; // yearly: the last visit
+  prev?: string; // yearly: the visit before, so marking done today can be undone
+  done?: boolean; // to do: checked off
+  doneOn?: string;
+  note?: string;
+}

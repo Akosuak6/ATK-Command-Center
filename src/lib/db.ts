@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import type {
   Account, Bill, Book, Studio, Transaction, BudgetCategory, CalendarEvent, DumpItem, FitnessClass, Goal, Habit, HealthDay,
   Meta, Person, Pin, Priority, Restaurant, RoadmapItem, SavingsGoal, ShowEvent, SkincareStep, Supplement,
-  Trim, Trip, WishItem, DaySnapshot
+  Trim, Trip, WishItem, DaySnapshot, PeriodGoal, BucketItem, Contact, CareItem
 } from './types';
 
 export class CommandCenterDB extends Dexie {
@@ -33,6 +33,10 @@ export class CommandCenterDB extends Dexie {
   studios!: Table<Studio, string>;
   transactions!: Table<Transaction, string>;
   history!: Table<DaySnapshot, string>;
+  periodGoals!: Table<PeriodGoal, string>;
+  bucket!: Table<BucketItem, string>;
+  contacts!: Table<Contact, string>;
+  care!: Table<CareItem, string>;
 
   constructor() {
     super('akosua-command-center');
@@ -65,7 +69,11 @@ export class CommandCenterDB extends Dexie {
       health: 'date',
       studios: 'id, order',
       transactions: 'id, date, category, kind',
-      history: 'date'
+      history: 'date',
+      periodGoals: 'id, period',
+      bucket: 'id, category',
+      contacts: 'id, lastContact',
+      care: 'id, order'
     });
   }
 }

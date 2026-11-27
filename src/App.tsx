@@ -8,12 +8,13 @@ import { TrendCards } from './components/TrendCards';
 import { SearchResults } from './components/Search';
 import { BackupReminder } from './pages/Settings';
 import { HomeToday, HomeGoals } from './pages/Home';
+import { HomeBucket } from './pages/Bucket';
 import { DumpAll, Bookshelf } from './pages/Dump';
 import { MoneyOverview, MoneyBudget, MoneyGoals, TripPlanner } from './pages/Money';
 import { HealthClasses, HealthRoutines } from './pages/Health';
 import { HealthWorkouts } from './pages/Workouts';
-import { VisionBoard, PeoplePlans } from './pages/Social';
-import { WorkSoon } from './pages/Work';
+import { SocialCalendar } from './pages/Social';
+import { WorkContacts } from './pages/Work';
 import { SettingsPage } from './pages/Settings';
 import { SyncLine } from './components/SyncStatus';
 
@@ -24,6 +25,7 @@ const NAV_ICONS: Record<string, () => ReactElement> = {
 const PAGES: Record<string, (p: { param?: string }) => ReactNode> = {
   'home/today': () => <HomeToday />,
   'home/goals': () => <HomeGoals />,
+  'home/bucket': ({ param }) => <HomeBucket focus={param} />,
   'dump/all': ({ param }) => <DumpAll focus={param} />,
   'dump/books': ({ param }) => <Bookshelf focus={param} />,
   'money/overview': () => <MoneyOverview />,
@@ -33,9 +35,8 @@ const PAGES: Record<string, (p: { param?: string }) => ReactNode> = {
   'health/classes': ({ param }) => <HealthClasses focus={param} />,
   'health/workouts': () => <HealthWorkouts />,
   'health/routines': () => <HealthRoutines />,
-  'social/board': ({ param }) => <VisionBoard focus={param} />,
-  'social/people': () => <PeoplePlans />,
-  'work/soon': () => <WorkSoon />,
+  'social/calendar': ({ param }) => <SocialCalendar focus={param} />,
+  'work/contacts': ({ param }) => <WorkContacts focus={param} />,
   'settings/backup': () => <SettingsPage />
 };
 
@@ -135,7 +136,6 @@ function NavLink({ id, label, current, className = '' }: { id: SectionId; label:
     <a className={`navbtn ${className}`} href={hrefFor(id)} aria-current={current ? 'page' : undefined}>
       <Icon />
       <span className="navlbl">{label}</span>
-      {id === 'work' && <span className="tag t-plain soon">Soon</span>}
     </a>
   );
 }

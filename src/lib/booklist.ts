@@ -62,12 +62,17 @@ export const sameTitle = (a: string, b: string) => {
 };
 export const onShelf = (shelf: Book[], title: string) => shelf.some((b) => sameTitle(b.title, title));
 
-// Adds the books right away, then fills in each cover and description in the background.
+// Adds the books right away and returns their ids, then fills in each cover and description in the background.
 // A lookup that comes back with a different title (another edition, another language) is left out.
-export async function addFoundBooks(found: FoundBook[], status: Shelf): Promise<void> {
+export async function addFoundBooks(found: FoundBook[], status: Shelf): Promise<string[]> {
   const date = todayISO();
   const rows: Book[] = found.map((f) => ({ id: uid(), title: f.title, author: f.author || 'Unknown author', status, stars: 0, review: '', date }));
   await db.books.bulkAdd(rows);
+  void fillCovers(rows);
+  return rows.map((r) => r.id);
+}
+
+async function fillCovers(rows: Book[]) {
   for (const row of rows) {
     const info = await lookupBook(`${row.title} ${row.author === 'Unknown author' ? '' : row.author}`.trim()).catch(() => null);
     if (!info || !sameTitle(info.title, row.title)) continue;

@@ -11,6 +11,8 @@ export function SearchResults({ query, onDone }: { query: string; onDone: () => 
   const classes = useTable(db.classes);
   const restaurants = useTable(db.restaurants);
   const trips = useTable(db.trips, 'date');
+  const contacts = useTable(db.contacts);
+  const bucket = useTable(db.bucket);
   const q = query.trim().toLowerCase();
   const has = (...parts: (string | undefined)[]) => parts.join(' ').toLowerCase().includes(q);
 
@@ -27,7 +29,13 @@ export function SearchResults({ query, onDone }: { query: string; onDone: () => 
     if (has(c.name, c.type, c.studio, c.instructor, c.notes)) results.push({ kind: c.type, title: `${c.name}, ${c.studio}`, where: 'Classes', tag: 'tag t-health', href: hrefFor('health', 'classes', c.id) });
   });
   restaurants.forEach((r) => {
-    if (has(r.name, r.cuisine, r.hood)) results.push({ kind: r.cuisine, title: `${r.name}, ${r.hood}`, where: 'Vision board', tag: 'tag t-social', href: hrefFor('social', 'board', r.id) });
+    if (has(r.name, r.cuisine, r.hood)) results.push({ kind: r.cuisine, title: `${r.name}, ${r.hood}`, where: 'Social calendar', tag: 'tag t-social', href: hrefFor('social', 'calendar', r.id) });
+  });
+  contacts.forEach((c) => {
+    if (has(c.first, c.last, c.company, c.role, c.email, c.note, ...(c.industries ?? []))) results.push({ kind: 'Contact', title: `${c.first} ${c.last}`.trim() + (c.company ? `, ${c.company}` : ''), where: 'Work contacts', tag: 'tag t-work', href: hrefFor('work', 'contacts', c.id) });
+  });
+  bucket.forEach((b) => {
+    if (has(b.title, b.note, b.category)) results.push({ kind: b.category, title: b.title, where: 'Bucket list', tag: 'tag t-plain', href: hrefFor('home', 'bucket', b.id) });
   });
   trips.forEach((t) => {
     if (has(t.name, t.status)) results.push({ kind: 'Trip', title: t.name, where: 'Trip planner', tag: 'tag t-money', href: hrefFor('money', 'trips', t.id) });

@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { db, uid, useMeta, useTable } from '../lib/db';
 import { hrefFor } from '../lib/router';
-import { addDays, clock12, daysBetween, gapLabel, monthShort, normalizeUrl, parseISO, pct, titleFromUrl, todayISO, weekdayShort } from '../lib/format';
-import type { Person, Pin, Restaurant, RestaurantList, ShowEvent } from '../lib/types';
+import { addDays, clock12, daysBetween, gapLabel, money, monthShort, normalizeUrl, parseISO, pct, shortDate, titleFromUrl, todayISO, weekdayShort } from '../lib/format';
+import type { Person, Pin, Restaurant, RestaurantList, ShowEvent, Trip } from '../lib/types';
 import { Chips, EditButton, FileButton, Sheet, openDataUrl, readFileAsDataURL, resizePhoto, useToast } from '../components/ui';
 import { ImagePicker } from '../components/ImagePicker';
 import { PhotoPlaceholder } from './Health';
@@ -12,6 +12,7 @@ import { useFocusItem } from '../components/Search';
 import { previewWithCover } from '../lib/preview';
 import { linkKind } from '../lib/links';
 import { LinkMedia } from '../components/LinkMedia';
+import { dayLabel } from '../lib/plan';
 
 const pinLabel = (url?: string) => {
   const k = url ? linkKind(url).kind : 'other';
@@ -20,13 +21,32 @@ const pinLabel = (url?: string) => {
 
 const MAX_TICKET_BYTES = 6 * 1024 * 1024;
 
-export function VisionBoard({ focus }: { focus?: string }) {
+// Cards in a deck lean a little, each its own way, and straighten when you point at one.
+const TILTS = [-1.6, 1.1, -0.8, 1.5, -1.2, 0.9];
+const tilt = (i: number) => ({ '--tilt': `${TILTS[i % TILTS.length]}deg` }) as CSSProperties;
+
+// Coming trips first by date, then the ones still being dreamed up, then the ones you have been on.
+function tripOrder(trips: Trip[], today: string) {
+  const ahead = trips.filter((t) => t.date && (t.endDate ?? t.date) >= today).sort((a, b) => a.date.localeCompare(b.date));
+  const undated = trips.filter((t) => !t.date);
+  const past = trips.filter((t) => t.date && (t.endDate ?? t.date) < today).sort((a, b) => b.date.localeCompare(a.date));
+  return [...ahead, ...undated, ...past];
+}
+
+const tripSpan = (t: Trip) => {
+  if (!t.date) return 'No dates yet';
+  if (!t.endDate || t.endDate === t.date) return shortDate(t.date);
+  return t.date.slice(5, 7) === t.endDate.slice(5, 7) ? `${shortDate(t.date)} to ${parseISO(t.endDate).getDate()}` : `${shortDate(t.date)} to ${shortDate(t.endDate)}`;
+};
+
+export function SocialCalendar({ focus }: { focus?: string }) {
   const trips = useTable(db.trips, 'date');
   const pins = useTable(db.pins, 'date', true);
   const restaurants = useTable(db.restaurants);
   const shows = useTable(db.shows, 'date');
-  const headline = useMeta<[string, string]>('visionHeadline', ['2027 is for', 'more yeses']);
-  const intention = useMeta<string>('intention', 'Say yes to the dinner, the trip and the last minute plan.');
+  const calendar = useTable(db.calendar, 'date');
+  const people = useTable(db.people, 'lastContact');
+  const intention = useMeta<string>('intention', '');
   const city = useMeta<string>('city', '');
   const toast = useToast();
   const [pinDraft, setPinDraft] = useState('');
@@ -36,9 +56,23 @@ export function VisionBoard({ focus }: { focus?: string }) {
   const [editingPin, setEditingPin] = useState<Pin | null>(null);
   const [editingR, setEditingR] = useState<Restaurant | null>(null);
   const [sForm, setSForm] = useState({ title: '', date: '', detail: '', season: '' });
-  const [edit, setEdit] = useState<'' | 'shows'>('');
+  const [edit, setEdit] = useState<'' | 'shows' | 'people'>('');
+  const [name, setName] = useState('');
   useFocusItem(focus, restaurants.length > 0);
 
+  const today = todayISO();
+  const week = calendar
+    .filter((e) => e.area === 'Social' && e.date >= today && e.date <= addDays(today, 6))
+    .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+  const deckTrips = tripOrder(trips, today);
+  const upcomingShows = [...shows.filter((x) => x.date && x.date >= addDays(today, -1)), ...shows.filter((x) => !x.date && x.season)];
+  const shownR = restaurants.filter((r) => rFilter === 'All' || r.list === rFilter);
+
+  const addPerson = () => {
+    if (!name.trim()) return;
+    void db.people.add({ id: uid(), name: name.trim(), lastContact: today, note: '' });
+    setName('');
+  };
   const onPhoto = async (file: File) => {
     try {
       const src = await resizePhoto(file);
@@ -76,112 +110,116 @@ export function VisionBoard({ focus }: { focus?: string }) {
     toast('Ticket saved');
   };
 
-  const shownR = restaurants.filter((r) => rFilter === 'All' || r.list === rFilter);
-  const today = todayISO();
-  const upcomingShows = [...shows.filter((s) => s.date && s.date >= addDays(today, -1)), ...shows.filter((s) => !s.date && s.season)];
-
   return (
     <div className="stack">
-      <div className="board-head">
-        <h2 className="board-title">{headline[0]} <strong>{headline[1]}</strong></h2>
-        <FileButton label="Upload a photo" accept="image/*" onFile={onPhoto} />
-      </div>
-      <form className="inline-add" noValidate onSubmit={(e) => { e.preventDefault(); void addPin(); }}>
-        <label htmlFor="pinlink" className="sr">Paste a link to pin</label>
-        <input id="pinlink" type="url" inputMode="url" autoCapitalize="off" className="field" value={pinDraft} onChange={(e) => setPinDraft(e.target.value)}
-          onPaste={(e) => {
-            const f = Array.from(e.clipboardData.items).find((i) => i.type.startsWith('image/'))?.getAsFile();
-            if (f) { e.preventDefault(); void onPhoto(f); }
-          }}
-          placeholder="Paste a link or a photo to pin" />
-        <button type="submit" className="btn2">Pin</button>
-      </form>
-
-      <div className="masonry">
-        {trips.map((t, i) => {
-          const p = pct(t.saved, t.cost);
-          return (
-            <a key={t.id} href={hrefFor('money', 'trips', t.id)} className={`trip-tile${i === 0 ? ' tall' : ''}${t.photo ? ' has-photo' : ''}`}
-              style={t.photo ? { backgroundImage: `linear-gradient(180deg, rgba(15,26,46,0.35) 0%, rgba(15,26,46,0.88) 75%), url("${t.photo}")` } : undefined}>
-              <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                <span className="lbl" style={{ color: 'var(--cream-2)' }}>Travel</span>
-                <span className="tag" style={{ background: 'var(--cream)', color: 'var(--navy)' }}>{t.status}</span>
-              </span>
-              <span className="stack-s" style={{ width: '100%' }}>
-                <span className="trip-name">{t.name}</span>
-                <span className="track"><span className="fill" style={{ width: `${p}%` }} /></span>
-                <span style={{ fontSize: 13, color: 'var(--cream)' }}>{p}% saved · Open trip planner</span>
-              </span>
-            </a>
-          );
-        })}
-
-        {pins.map((p) => (
-          <div className="card pin-card" key={p.id}>
-            {p.kind === 'photo' ? (
-              <img src={p.src} alt="Pinned photo" loading="lazy" />
-            ) : (
-              <div className="pin-link-wrap">
-                <LinkMedia url={p.url ?? ''} cover={p.cover} title={p.title ?? 'Pinned link'} className="pin-cover" />
-                <a href={p.url} target="_blank" rel="noopener noreferrer" className="pin-link">
-                  <span className="lbl">{pinLabel(p.url)}</span>
-                  <span style={{ fontFamily: 'var(--serif)', fontSize: 20, paddingRight: p.cover ? 0 : 76 }}>{p.title}</span>
-                </a>
-              </div>
-            )}
-            {p.kind === 'link' && (
-              <button type="button" className="icon-btn pin-edit" style={{ border: 'none' }} aria-label={`Edit ${p.title}`} onClick={() => setEditingPin(p)}>
-                <IconPencil />
-              </button>
-            )}
-            <button type="button" className="icon-btn pin-remove" style={{ border: 'none' }} aria-label={p.kind === 'photo' ? 'Remove photo' : `Remove ${p.title}`} onClick={() => { if (confirm('Remove this pin?')) void db.pins.delete(p.id); }}>
-              <IconTrash />
-            </button>
+      <div className="grid2">
+        <section className="card" aria-labelledby="week-h">
+          <div className="row"><h2 className="h2" id="week-h">Plans this week</h2><span className="sub">From your calendar</span></div>
+          <div>
+            {week.map((e) => (
+              <div className="line" key={e.id}><span>{e.date === today ? 'Today' : weekdayShort(e.date)} · {e.title}</span><span className="sub">{clock12(e.time)}</span></div>
+            ))}
+            {week.length === 0 && <p className="empty">No social plans on the calendar this week. Maybe time to make one.</p>}
           </div>
-        ))}
+        </section>
+        <section className="card" aria-labelledby="reach-h">
+          <div className="row"><h2 className="h2" id="reach-h">Reach out to</h2><span className="sub">Longest gap first</span></div>
+          <div>
+            {people.map((p) => {
+              const gap = daysBetween(p.lastContact, today);
+              return (
+                <div className="line" key={p.id}>
+                  <Avatar name={p.name} photo={p.photo} />
+                  <span className="line-main"><span>{p.name}</span><span className={`sub${gap > 30 ? ' bad-text' : ''}`}>{gap > 0 ? `${gapLabel(gap)} since you talked` : 'Talked today'}</span></span>
+                  <button type="button" className="btn2" onClick={() => { void db.people.update(p.id, { lastContact: today }); toast(`Marked ${p.name} as caught up`); }}>Caught up</button>
+                </div>
+              );
+            })}
+            {people.length === 0 && <p className="empty">Add the people you want to keep up with.</p>}
+          </div>
+          <form className="inline-add" onSubmit={(e) => { e.preventDefault(); addPerson(); }}>
+            <label htmlFor="pname" className="sr">Add a person</label>
+            <input id="pname" className="field" value={name} onChange={(e) => setName(e.target.value)} placeholder="Add a person" />
+            <button type="submit" className="btn2">Add</button>
+          </form>
+          <EditButton label="Edit people" onClick={() => setEdit('people')} />
+        </section>
+      </div>
 
-        <section className="card" aria-labelledby="shows-h">
-          <div className="row"><h3 className="h2" id="shows-h" style={{ fontSize: 20 }}>Shows and events</h3><span className="lbl">Tickets</span></div>
-          {upcomingShows.map((s) => (
-            <div className="ticket" key={s.id}>
-              {s.date
-                ? <div className="ticket-date"><span>{monthShort(s.date).toUpperCase()}</span><span>{parseISO(s.date).getDate()}</span></div>
-                : <div className="ticket-date season"><span>EVERY</span><span>{(s.season ?? '').toUpperCase()}</span></div>}
+      <section aria-labelledby="travel-h" className="stack" style={{ gap: 6 }}>
+        <div className="row row-wrap" style={{ alignItems: 'center' }}>
+          <h2 className="h2" id="travel-h">Travel</h2>
+          <a className="btn-text" href={hrefFor('money', 'trips')}>Open the trip planner</a>
+        </div>
+        {deckTrips.length === 0 && <p className="empty">No trips yet. Add one in the trip planner.</p>}
+        <div className="deck" role="list" aria-label="Trips">
+          {deckTrips.map((t, i) => {
+            const p = pct(t.saved, t.cost);
+            const past = !!t.date && (t.endDate ?? t.date) < today;
+            return (
+              <a key={t.id} role="listitem" href={hrefFor('money', 'trips', t.id)} style={tilt(i)}
+                className={`deck-card trip-card${t.photo ? ' has-photo' : ''}${past ? ' is-past' : ''}`}
+                aria-label={`${t.name}, ${tripSpan(t)}, ${t.status}`}>
+                {t.photo && <img className="trip-card-photo" src={t.photo} alt="" loading="lazy" />}
+                <span className="trip-card-top">
+                  <span className="tag trip-card-tag">{past ? 'Been' : t.status}</span>
+                  {t.date && !past && <span className="trip-card-when">{dayLabel(t.date, today)}</span>}
+                </span>
+                <span className="trip-card-bottom">
+                  <span className="trip-name">{t.name}</span>
+                  <span className="trip-card-dates">{tripSpan(t)}</span>
+                  {t.cost > 0 && !past && <span className="trip-card-saved">{p >= 100 ? 'Paid for' : `${money(t.cost)} trip`}</span>}
+                </span>
+              </a>
+            );
+          })}
+        </div>
+      </section>
+
+      <section aria-labelledby="shows-h" className="stack" style={{ gap: 6 }}>
+        <div className="row row-wrap" style={{ alignItems: 'center' }}>
+          <h2 className="h2" id="shows-h">Shows and events</h2>
+          <EditButton label="Edit shows and events" onClick={() => setEdit('shows')} />
+        </div>
+        {upcomingShows.length === 0 && <p className="empty">Nothing booked yet.</p>}
+        <div className="deck" role="list" aria-label="Shows and events">
+          {upcomingShows.map((x, i) => (
+            <article className="deck-card ticket-card" role="listitem" key={x.id} style={tilt(i + 2)}>
+              {x.date
+                ? <div className="ticket-date"><span>{monthShort(x.date).toUpperCase()}</span><span>{parseISO(x.date).getDate()}</span></div>
+                : <div className="ticket-date season"><span>EVERY</span><span>{(x.season ?? '').toUpperCase()}</span></div>}
               <div className="ticket-body">
-                {s.ticket?.type.startsWith('image/') && <img className="ticket-thumb" src={s.ticket.data} alt="" />}
-                <strong style={{ fontSize: 14 }}>{s.title}</strong>
-                {s.detail && <span className="sub">{s.detail}</span>}
-                {s.ticket ? (
-                  <button type="button" className="btn-text" style={{ alignSelf: 'flex-start', paddingLeft: 0 }} onClick={() => openDataUrl(s.ticket!.data)}>View ticket</button>
+                {x.ticket?.type.startsWith('image/') && <img className="ticket-thumb" src={x.ticket.data} alt="" />}
+                <strong className="ticket-title">{x.title}</strong>
+                {x.detail && <span className="sub">{x.detail}</span>}
+                {x.date && <span className="sub">{dayLabel(x.date, today)}</span>}
+                {x.ticket ? (
+                  <button type="button" className="btn-text" style={{ alignSelf: 'flex-start', paddingLeft: 0, marginTop: 'auto' }} onClick={() => openDataUrl(x.ticket!.data)}>View ticket</button>
                 ) : (
-                  <FileButton className="btn-text" label="Attach a ticket" accept="image/*,.pdf,application/pdf" onFile={(f) => attachTicket(s, f)} />
+                  <FileButton className="btn-text ticket-attach" label="Attach a ticket" accept="image/*,.pdf,application/pdf" onFile={(file) => attachTicket(x, file)} />
                 )}
               </div>
-            </div>
+            </article>
           ))}
-          {upcomingShows.length === 0 && <p className="empty">Nothing booked yet.</p>}
-          <details>
-            <summary className="btn-text" style={{ display: 'inline-flex', alignItems: 'center', paddingLeft: 0 }}>Add a show or event</summary>
-            <form className="stack-s" style={{ marginTop: 8 }} onSubmit={(e) => { e.preventDefault(); addShow(); }}>
-              <label className="lbl" htmlFor="stitle">What</label>
-              <input id="stitle" className="field" value={sForm.title} onChange={(e) => setSForm({ ...sForm, title: e.target.value })} />
-              <div className="form-2">
-                <div className="form-col"><label className="lbl" htmlFor="sdate">Date</label><input id="sdate" type="date" className="field" value={sForm.date} onChange={(e) => setSForm({ ...sForm, date: e.target.value })} /></div>
-                <div className="form-col"><label className="lbl" htmlFor="sdetail">Seat or time</label><input id="sdetail" className="field" value={sForm.detail} onChange={(e) => setSForm({ ...sForm, detail: e.target.value })} /></div>
-              </div>
-              <label className="lbl" htmlFor="sseason">No date yet? Every year in</label>
-              <select id="sseason" className="field" value={sForm.season} onChange={(e) => setSForm({ ...sForm, season: e.target.value })}>
-                <option value="">Not seasonal</option>
-                {['Winter', 'Spring', 'Summer', 'Fall'].map((x) => <option key={x} value={x}>{x}</option>)}
-              </select>
-              <button type="submit" className="btn2">Add event</button>
-            </form>
-          </details>
-          <EditButton label="Edit shows and events" onClick={() => setEdit('shows')} />
-        </section>
-
-        <div className="quote"><span className="chrome-text">"{intention}"</span></div>
-      </div>
+        </div>
+        <details className="card add-show">
+          <summary className="btn-text" style={{ display: 'inline-flex', alignItems: 'center', paddingLeft: 0 }}>Add a show or event</summary>
+          <form className="stack-s" style={{ marginTop: 8 }} onSubmit={(e) => { e.preventDefault(); addShow(); }}>
+            <label className="lbl" htmlFor="stitle">What</label>
+            <input id="stitle" className="field" value={sForm.title} onChange={(e) => setSForm({ ...sForm, title: e.target.value })} />
+            <div className="form-2">
+              <div className="form-col"><label className="lbl" htmlFor="sdate">Date</label><input id="sdate" type="date" className="field" value={sForm.date} onChange={(e) => setSForm({ ...sForm, date: e.target.value })} /></div>
+              <div className="form-col"><label className="lbl" htmlFor="sdetail">Seat or time</label><input id="sdetail" className="field" value={sForm.detail} onChange={(e) => setSForm({ ...sForm, detail: e.target.value })} /></div>
+            </div>
+            <label className="lbl" htmlFor="sseason">No date yet? Every year in</label>
+            <select id="sseason" className="field" value={sForm.season} onChange={(e) => setSForm({ ...sForm, season: e.target.value })}>
+              <option value="">Not seasonal</option>
+              {['Winter', 'Spring', 'Summer', 'Fall'].map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+            <button type="submit" className="btn2">Add event</button>
+          </form>
+        </details>
+      </section>
 
       <section aria-labelledby="rest-h" className="stack" style={{ gap: 14 }}>
         <div className="row row-wrap" style={{ alignItems: 'center' }}>
@@ -207,6 +245,51 @@ export function VisionBoard({ focus }: { focus?: string }) {
               </span>
             </div>
           ))}
+        </div>
+      </section>
+
+
+      <section aria-labelledby="pins-h" className="stack" style={{ gap: 14 }}>
+        <div className="row row-wrap" style={{ alignItems: 'center' }}>
+          <h2 className="h2" id="pins-h">Pinned</h2>
+          <FileButton label="Upload a photo" accept="image/*" onFile={onPhoto} />
+        </div>
+        <form className="inline-add" noValidate onSubmit={(e) => { e.preventDefault(); void addPin(); }}>
+          <label htmlFor="pinlink" className="sr">Paste a link to pin</label>
+          <input id="pinlink" type="url" inputMode="url" autoCapitalize="off" className="field" value={pinDraft} onChange={(e) => setPinDraft(e.target.value)}
+            onPaste={(e) => {
+              const file = Array.from(e.clipboardData.items).find((i) => i.type.startsWith('image/'))?.getAsFile();
+              if (file) { e.preventDefault(); void onPhoto(file); }
+            }}
+            placeholder="Paste a link or a photo to pin" />
+          <button type="submit" className="btn2">Pin</button>
+        </form>
+        {pins.length === 0 && !intention && <p className="empty">Pin photos and links you want to remember.</p>}
+        <div className="masonry">
+          {pins.map((p) => (
+            <div className="card pin-card" key={p.id}>
+              {p.kind === 'photo' ? (
+                <img src={p.src} alt="Pinned photo" loading="lazy" />
+              ) : (
+                <div className="pin-link-wrap">
+                  <LinkMedia url={p.url ?? ''} cover={p.cover} title={p.title ?? 'Pinned link'} className="pin-cover" />
+                  <a href={p.url} target="_blank" rel="noopener noreferrer" className="pin-link">
+                    <span className="lbl">{pinLabel(p.url)}</span>
+                    <span style={{ fontFamily: 'var(--serif)', fontSize: 20, paddingRight: p.cover ? 0 : 76 }}>{p.title}</span>
+                  </a>
+                </div>
+              )}
+              {p.kind === 'link' && (
+                <button type="button" className="icon-btn pin-edit" style={{ border: 'none' }} aria-label={`Edit ${p.title}`} onClick={() => setEditingPin(p)}>
+                  <IconPencil />
+                </button>
+              )}
+              <button type="button" className="icon-btn pin-remove" style={{ border: 'none' }} aria-label={p.kind === 'photo' ? 'Remove photo' : `Remove ${p.title}`} onClick={() => { if (confirm('Remove this pin?')) void db.pins.delete(p.id); }}>
+                <IconTrash />
+              </button>
+            </div>
+          ))}
+          {intention && <div className="quote"><span className="chrome-text">"{intention}"</span></div>}
         </div>
       </section>
 
@@ -243,62 +326,8 @@ export function VisionBoard({ focus }: { focus?: string }) {
         fields={[{ key: 'title', label: 'What', wide: true }, { key: 'date', label: 'Date', type: 'date' }, { key: 'detail', label: 'Seat or time' }, { key: 'season', label: 'Every year in (when there is no date)', type: 'select', options: [{ value: '', label: 'Not seasonal' }, ...['Winter', 'Spring', 'Summer', 'Fall'].map((x) => ({ value: x, label: x }))] }]}
         itemName={(s) => s.title}
       />
-    </div>
-  );
-}
-
-export function PeoplePlans() {
-  const calendar = useTable(db.calendar, 'date');
-  const people = useTable(db.people, 'lastContact');
-  const toast = useToast();
-  const [edit, setEdit] = useState(false);
-  const [name, setName] = useState('');
-  const today = todayISO();
-  const week = calendar
-    .filter((e) => e.area === 'Social' && e.date >= today && e.date <= addDays(today, 6))
-    .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
-
-  const add = () => {
-    if (!name.trim()) return;
-    void db.people.add({ id: uid(), name: name.trim(), lastContact: today, note: '' });
-    setName('');
-  };
-
-  return (
-    <div className="grid2">
-      <section className="card" aria-labelledby="week-h">
-        <div className="row"><h2 className="h2" id="week-h">Plans this week</h2><span className="sub">From your calendar</span></div>
-        <div>
-          {week.map((e) => (
-            <div className="line" key={e.id}><span>{e.date === today ? 'Today' : weekdayShort(e.date)} · {e.title}</span><span className="sub">{clock12(e.time)}</span></div>
-          ))}
-          {week.length === 0 && <p className="empty">No social plans on the calendar this week. Maybe time to make one.</p>}
-        </div>
-      </section>
-      <section className="card" aria-labelledby="reach-h">
-        <div className="row"><h2 className="h2" id="reach-h">Reach out to</h2><span className="sub">Longest gap first</span></div>
-        <div>
-          {people.map((p) => {
-            const gap = daysBetween(p.lastContact, today);
-            return (
-              <div className="line" key={p.id}>
-                <Avatar name={p.name} photo={p.photo} />
-                <span className="line-main"><span>{p.name}</span><span className={`sub${gap > 30 ? ' bad-text' : ''}`}>{gap > 0 ? `${gapLabel(gap)} since you talked` : 'Talked today'}</span></span>
-                <button type="button" className="btn2" onClick={() => { void db.people.update(p.id, { lastContact: today }); toast(`Marked ${p.name} as caught up`); }}>Caught up</button>
-              </div>
-            );
-          })}
-          {people.length === 0 && <p className="empty">Add the people you want to keep up with.</p>}
-        </div>
-        <form className="inline-add" onSubmit={(e) => { e.preventDefault(); add(); }}>
-          <label htmlFor="pname" className="sr">Add a person</label>
-          <input id="pname" className="field" value={name} onChange={(e) => setName(e.target.value)} placeholder="Add a person" />
-          <button type="submit" className="btn2">Add</button>
-        </form>
-        <EditButton label="Edit people" onClick={() => setEdit(true)} />
-      </section>
       <TableEditor<Person>
-        title="Edit people" open={edit} onClose={() => setEdit(false)} table={db.people} rows={people}
+        title="Edit people" open={edit === 'people'} onClose={() => setEdit('')} table={db.people} rows={people}
         fields={[{ key: 'name', label: 'Name' }, { key: 'lastContact', label: 'Last talked', type: 'date' }, { key: 'note', label: 'Note', wide: true }, { key: 'photo', label: 'Photo', type: 'image' }]}
         itemName={(p) => p.name}
       />
@@ -306,7 +335,7 @@ export function PeoplePlans() {
   );
 }
 
-function Avatar({ name, photo }: { name: string; photo?: string }) {
+export function Avatar({ name, photo }: { name: string; photo?: string }) {
   const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('');
   return photo
     ? <img className="avatar" src={photo} alt="" />

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { db, setMeta, uid, useMeta, useTable } from '../lib/db';
-import { addDays, titleCase, clock12, daysBetween, duration, money, parseISO, weekday, pct, sameMonth, shortDate, todayISO, weekdayShort } from '../lib/format';
+import { addDays, titleCase, clock12, daysBetween, duration, longDate, money, monthYear, parseISO, weekday, pct, sameMonth, shortDate, todayISO, weekdayShort } from '../lib/format';
+import { careNext } from '../lib/plan';
 import { recovery, todaysCall } from '../lib/calc';
-import type { ClassType, Facial, FitnessClass, Studio, Habit, HealthDay, SkincareStep, Supplement, WishItem } from '../lib/types';
+import type { CareItem, ClassType, Facial, FitnessClass, Studio, Habit, HealthDay, SkincareStep, Supplement, WishItem } from '../lib/types';
 import { Bar, Checkbox, Chips, EditButton, Sheet, Stars, useToast } from '../components/ui';
 import { ImagePicker } from '../components/ImagePicker';
 import { logoFromWebsite } from '../lib/preview';
@@ -667,8 +668,9 @@ export function HealthRoutines() {
   const skincare = useTable(db.skincare, 'order');
   const habits = useTable(db.habits, 'order');
   const wishlist = useTable(db.wishlist);
+  const care = useTable(db.care, 'order');
   const supLog = useMeta<string[]>('supplementLog', []);
-  const [edit, setEdit] = useState<'' | 'sup' | 'skin' | 'habits' | 'wish'>('');
+  const [edit, setEdit] = useState<'' | 'sup' | 'skin' | 'habits' | 'wish' | 'care'>('');
   const today = todayISO();
   const last7 = Array.from({ length: 7 }, (_, i) => addDays(today, i - 6));
 
@@ -745,6 +747,8 @@ export function HealthRoutines() {
         <EditButton label="Edit habits" onClick={() => setEdit('habits')} />
       </section>
 
+      <CareCard items={care} onEdit={() => setEdit('care')} />
+
       <section className="card" aria-labelledby="wish-h">
         <div className="row"><h2 className="h2" id="wish-h">Self care to try</h2><span className="sub">Wishlist</span></div>
         <div>
@@ -775,12 +779,66 @@ export function HealthRoutines() {
         fields={[{ key: 'name', label: 'Habit', wide: true }, { key: 'target', label: 'Times a day (1 for a simple check)', type: 'number' }, { key: 'unit', label: 'What one tap counts (optional)', placeholder: 'bottle' }, { key: 'order', label: 'Order', type: 'number' }]}
         itemName={(x) => x.name} addLabel="Add a habit" make={() => ({ order: habits.length + 1, name: '', done: [], target: 1 })}
       />
+      <TableEditor<CareItem>
+        title="Edit doctor reminders" open={edit === 'care'} onClose={() => setEdit('')} table={db.care} rows={care}
+        fields={[{ key: 'title', label: 'Reminder', wide: true }, { key: 'kind', label: 'Kind', type: 'select', options: [{ value: 'yearly', label: 'Yearly checkup' }, { value: 'todo', label: 'One time to do' }] }, { key: 'last', label: 'Last visit (yearly checkups)', type: 'date' }, { key: 'done', label: 'Done (to dos)', type: 'checkbox' }, { key: 'note', label: 'Note (optional)', wide: true, placeholder: 'Doctor, office, or what to ask' }, { key: 'order', label: 'Order', type: 'number' }]}
+        itemName={(x) => x.title} addLabel="Add a reminder" make={() => ({ order: care.length + 1, title: '', kind: 'todo', done: false })}
+      />
       <TableEditor<WishItem>
         title="Edit wishlist" open={edit === 'wish'} onClose={() => setEdit('')} table={db.wishlist} rows={wishlist}
         fields={[{ key: 'text', label: 'Idea', wide: true }, { key: 'tag', label: 'Tag', type: 'select', options: ['Book', 'Try', 'Buy', 'Schedule'].map((v) => ({ value: v, label: v })) }]}
         itemName={(x) => x.text} addLabel="Add an idea" make={() => ({ text: '', tag: 'Try', done: false })}
       />
     </div>
+  );
+}
+
+// Yearly checkups are checked while the last visit is under a year old; to dos stay checked once done.
+function CareCard({ items, onEdit }: { items: CareItem[]; onEdit: () => void }) {
+  const toast = useToast();
+  const today = todayISO();
+  const isChecked = (c: CareItem) => (c.kind === 'todo' ? !!c.done : !!c.last && careNext(c) > today);
+  const sorted = [...items].sort((a, b) => Number(isChecked(a)) - Number(isChecked(b)) || a.order - b.order);
+  const open = items.filter((c) => !isChecked(c)).length;
+
+  const toggle = (c: CareItem) => {
+    if (c.kind === 'todo') { void db.care.update(c.id, c.done ? { done: false, doneOn: undefined } : { done: true, doneOn: today }); return; }
+    if (!isChecked(c)) { void db.care.update(c.id, { last: today, prev: c.last }); toast(`${c.title} marked done today`); return; }
+    if (c.last === today) { void db.care.update(c.id, { last: c.prev, prev: undefined }); return; }
+    toast('Tap Edit to change the date of your last visit');
+  };
+  const status = (c: CareItem): { text: string; bad: boolean } => {
+    if (c.kind === 'todo') return c.done ? { text: c.doneOn ? `Done ${shortDate(c.doneOn)}` : 'Done', bad: false } : { text: 'Still to do', bad: false };
+    if (!c.last) return { text: 'Add your last visit, or book one', bad: true };
+    const next = careNext(c);
+    if (next <= today) return { text: `Due now, last visit ${longDate(c.last)}`, bad: true };
+    return { text: `Last visit ${shortDate(c.last)}, next due ${monthYear(next)}`, bad: daysBetween(today, next) <= 45 };
+  };
+
+  return (
+    <section className="card" aria-labelledby="care-h">
+      <div className="row"><h2 className="h2" id="care-h">Doctor reminders</h2><span className="sub">{items.length ? (open ? `${open} to take care of` : 'All set') : ''}</span></div>
+      <div>
+        {sorted.map((c) => {
+          const on = isChecked(c);
+          const st = status(c);
+          return (
+            <div className="line" key={c.id}>
+              <button type="button" className="prio-toggle" aria-pressed={on} onClick={() => toggle(c)}>
+                <Checkbox on={on} />
+                <span className="line-main">
+                  <span className={on && c.kind === 'todo' ? 'done-text' : ''}>{c.title}</span>
+                  <span className={`sub${st.bad ? ' bad-text' : ''}`}>{st.text}{c.note ? `. ${c.note}` : ''}</span>
+                </span>
+              </button>
+              <span className={`tag ${c.kind === 'yearly' ? 't-health' : 't-plain'}`}>{c.kind === 'yearly' ? 'Yearly' : 'To do'}</span>
+            </div>
+          );
+        })}
+        {items.length === 0 && <p className="empty">Add checkups and appointments to keep track of.</p>}
+      </div>
+      <EditButton label="Edit doctor reminders" onClick={onEdit} />
+    </section>
   );
 }
 

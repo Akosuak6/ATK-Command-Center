@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { db, uid, useMeta, useTable } from '../lib/db';
 import { hrefFor } from '../lib/router';
-import { clock12, longDate, money, pct, sameMonth, todayISO } from '../lib/format';
+import { clock12, longDate, money, monthShort, pct, sameMonth, todayISO } from '../lib/format';
 import { goalProgress, learningScore, moneyScore, readThisYear, recovery, socialScore } from '../lib/calc';
-import type { Goal, HealthDay, MoneySnapshot } from '../lib/types';
-import { Bar, Checkbox, EditButton, areaClass, useNow } from '../components/ui';
-import { IconTrash } from '../components/Icons';
+import type { Facial, Goal, HealthDay, Horizon, MoneySnapshot } from '../lib/types';
+import { Bar, Checkbox, Chips, EditButton, areaClass, useNow } from '../components/ui';
+import { IconChevronLeft, IconChevronRight, IconTrash } from '../components/Icons';
+import { comingUp, dayLabel, goalQuip, periodFor } from '../lib/plan';
 import { TableEditor, type FieldDef } from '../components/ListEditor';
 import { DUMP_LABEL, DUMP_TAG } from './Dump';
 import { useLiveMoney } from './Money';
@@ -28,7 +29,7 @@ export function HomeToday() {
   const [draft, setDraft] = useState('');
 
   const h = now.getHours();
-  const trip = trips.find((t) => t.id === 'lisbon') ?? trips[0];
+  const trip = trips.find((t) => t.date && t.date >= today) ?? trips.find((t) => !t.date) ?? trips[trips.length - 1];
   const read = readThisYear(books).length;
   const todays = calendar.filter((e) => e.date === today);
   const nowHM = `${String(h).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -68,6 +69,8 @@ export function HomeToday() {
           </a>
         ))}
       </div>
+
+      <HomePlan />
 
       <div className="grid3">
         <section aria-labelledby="prio-h" className="pinned">
@@ -128,6 +131,146 @@ export function HomeToday() {
         </section>
       </div>
     </div>
+  );
+}
+
+const HORIZONS: { value: Horizon; label: string }[] = [
+  { value: 'week', label: 'Week' }, { value: 'month', label: 'Month' }, { value: 'quarter', label: 'Quarter' }, { value: 'year', label: 'Year' }
+];
+const SPAN: Record<Horizon, string> = { week: 'week', month: 'month', quarter: 'quarter', year: 'year' };
+const SHOWN = 8;
+
+const savedHorizon = (): Horizon => {
+  try {
+    const v = localStorage.getItem('planHorizon');
+    return v === 'month' || v === 'quarter' || v === 'year' ? v : 'week';
+  } catch { return 'week'; }
+};
+
+// Goals for a week, month, quarter or year, next to everything dated in it.
+function HomePlan() {
+  const [h, setH] = useState<Horizon>(savedHorizon);
+  const [offset, setOffset] = useState(0);
+  const [draft, setDraft] = useState('');
+  const [all, setAll] = useState(false);
+  const periodGoals = useTable(db.periodGoals, 'order');
+  const calendar = useTable(db.calendar, 'date');
+  const trips = useTable(db.trips, 'date');
+  const savings = useTable(db.savings, 'order');
+  const goals = useTable(db.goals, 'order');
+  const shows = useTable(db.shows, 'date');
+  const bucket = useTable(db.bucket, 'date');
+  const facial = useMeta<Facial | null>('facial', null);
+  const care = useTable(db.care, 'order');
+  const books = useTable(db.books);
+  const classes = useTable(db.classes);
+  const accounts = useTable(db.accounts, 'order');
+  const readingGoal = useMeta<number>('readingGoal', 20);
+
+  const p = periodFor(h, offset);
+  const longTerm = goals.filter((g) => !g.achieved).slice(0, 4);
+  const ctx = { trips, books, classes, savings, readingGoal, accounts };
+  const mine = periodGoals.filter((g) => g.period === p.key);
+  const done = mine.filter((g) => g.done).length;
+  const { list, next } = comingUp({ calendar, trips, savings, goals, shows, bucket, facial, care }, p);
+  const shown = all ? list : list.slice(0, SHOWN);
+
+  const pick = (v: Horizon) => {
+    setH(v);
+    setOffset(0);
+    setAll(false);
+    try { localStorage.setItem('planHorizon', v); } catch { /* the view just resets next time */ }
+  };
+  const add = () => {
+    const t = draft.trim();
+    if (!t) return;
+    void db.periodGoals.add({ id: uid(), period: p.key, text: t, done: false, order: Date.now() });
+    setDraft('');
+  };
+
+  return (
+    <section aria-labelledby="plan-h" className="stack" style={{ gap: 14 }}>
+      <div className="plan-head">
+        <div className="plan-title">
+          <button type="button" className="icon-btn" aria-label={`Previous ${SPAN[h]}`} onClick={() => { setOffset((o) => o - 1); setAll(false); }}><IconChevronLeft /></button>
+          <div className="stack-s" style={{ gap: 2, minWidth: 0 }}>
+            <h2 className="h2" id="plan-h">{p.title}</h2>
+            <span className="sub">{p.range}</span>
+          </div>
+          <button type="button" className="icon-btn" aria-label={`Next ${SPAN[h]}`} onClick={() => { setOffset((o) => o + 1); setAll(false); }}><IconChevronRight /></button>
+          {offset !== 0 && <button type="button" className="btn-text" onClick={() => setOffset(0)}>Back to now</button>}
+        </div>
+        <Chips label="Plan view" value={h} onChange={pick} options={HORIZONS} />
+      </div>
+
+      <div className="grid2">
+        <section className="card" aria-labelledby="pgoals-h">
+          <div className="row"><h3 className="h2" id="pgoals-h">Goals</h3><span className="sub">{mine.length ? `${done} of ${mine.length} done` : ''}</span></div>
+          <span className="quip">{goalQuip(done, mine.length, h)}</span>
+          <div>
+            {mine.map((g) => (
+              <div className="prio-row" key={g.id}>
+                <button type="button" className="prio-toggle" aria-pressed={g.done} onClick={() => db.periodGoals.update(g.id, { done: !g.done })}>
+                  <Checkbox on={g.done} />
+                  <span className={g.done ? 'done-text' : ''} style={{ fontSize: 14 }}>{g.text}</span>
+                </button>
+                <button type="button" className="icon-btn" style={{ border: 'none', background: 'transparent' }} aria-label={`Delete ${g.text}`} onClick={() => db.periodGoals.delete(g.id)}>
+                  <IconTrash />
+                </button>
+              </div>
+            ))}
+          </div>
+          <form className="inline-add" onSubmit={(e) => { e.preventDefault(); add(); }}>
+            <label htmlFor="newpgoal" className="sr">Add a goal for {p.title.toLowerCase()}</label>
+            <input id="newpgoal" type="text" className="field" value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={`A goal for ${p.title.toLowerCase()}`} />
+            <button type="submit" className="btn2">Add</button>
+          </form>
+          {longTerm.length > 0 && (
+            <div className="toward">
+              <span className="lbl">Working toward</span>
+              {longTerm.map((g) => {
+                const pr = goalProgress(g, ctx);
+                return (
+                  <a key={g.id} className="toward-row" href={hrefFor('home', 'goals')}>
+                    <span className="row"><span className="toward-title">{g.title}</span><span className="sub">{pr.pct}%</span></span>
+                    <Bar value={pr.pct} />
+                    {g.due && <span className="sub">By {longDate(g.due)}</span>}
+                  </a>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        <section className="card" aria-labelledby="coming-h">
+          <div className="row"><h3 className="h2" id="coming-h">Coming up</h3><span className="sub">{list.length ? `${list.length} dated` : ''}</span></div>
+          {list.length === 0 && <p className="empty">Nothing dated in this {SPAN[h]}.</p>}
+          <div className="miles">
+            {shown.map((m) => {
+              const inner = (
+                <>
+                  <span className="mile-date chrome" aria-hidden="true"><span className="mile-mon">{monthShort(m.date)}</span><span className="mile-day">{Number(m.date.slice(8, 10))}</span></span>
+                  <span className="mile-body">
+                    <strong>{m.title}</strong>
+                    <span className="sub">{[m.detail, dayLabel(m.date)].filter(Boolean).join(' · ')}</span>
+                  </span>
+                  <span className={areaClass(m.area)}>{m.area}</span>
+                </>
+              );
+              return m.href
+                ? <a key={m.id} className="mile" href={m.href} aria-label={`${m.title}, ${longDate(m.date)}`}>{inner}</a>
+                : <div key={m.id} className="mile" aria-label={`${m.title}, ${longDate(m.date)}`}>{inner}</div>;
+            })}
+          </div>
+          {list.length > SHOWN && (
+            <button type="button" className="btn-text" onClick={() => setAll((x) => !x)}>{all ? 'Show fewer' : `Show all ${list.length}`}</button>
+          )}
+          {next && list.length < 3 && (
+            <p className="sub">After this: <strong>{next.title}</strong>, {longDate(next.date)}</p>
+          )}
+        </section>
+      </div>
+    </section>
   );
 }
 
