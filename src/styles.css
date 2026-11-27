@@ -677,26 +677,28 @@ dialog.sheet[open] { display: flex; flex-direction: column; overflow: hidden; }
 .deck-card:hover, .deck-card:focus-visible, .deck-card:focus-within { transform: translateY(-10px) rotate(0deg); z-index: 20; box-shadow: 0 18px 36px -14px rgba(0, 0, 0, 0.6); }
 @media (prefers-reduced-motion: reduce) { .deck-card { transition: none; } }
 
-.trip-card { height: 300px; border-radius: 18px; background: var(--chrome); border: 1px solid var(--chrome-edge); padding: 18px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; text-decoration: none; color: var(--navy); }
-.trip-card.has-photo { color: #FFFFFF; border-color: rgba(255, 255, 255, 0.18); }
-.trip-card-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.trip-card.has-photo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(7, 11, 20, 0.2) 0%, rgba(7, 11, 20, 0.86) 78%); }
-.trip-card-top, .trip-card-bottom { position: relative; z-index: 1; display: flex; }
-.trip-card-top { justify-content: space-between; align-items: center; gap: 8px; }
-.trip-card-bottom { flex-direction: column; gap: 6px; }
-.trip-card-tag { background: var(--navy); color: var(--cream); }
-.trip-card.has-photo .trip-card-tag { background: var(--cream); color: var(--navy); }
-.trip-card-when { font-size: 12px; font-weight: 600; }
-.trip-card .trip-name { color: inherit; font-size: 28px; }
-.trip-card-dates { font-size: 13px; font-weight: 600; letter-spacing: 0.02em; }
-.trip-card-saved { font-size: 12px; opacity: 0.85; }
-.trip-card .track { width: 100%; background: rgba(15, 26, 46, 0.22); }
-.trip-card .fill { background: var(--navy); }
-.trip-card.has-photo .track { background: rgba(255, 255, 255, 0.25); }
-.trip-card.has-photo .fill { background: var(--cream); }
-.trip-card.is-past { filter: saturate(0.6); opacity: 0.85; }
-:root[data-theme='moody'] .deck a.trip-card.deck-card { color: #0F1A2E; }
-:root[data-theme='moody'] .deck a.trip-card.deck-card.has-photo { color: #FFFFFF; }
+.deck-trip { height: 300px; border-radius: 18px; background: var(--chrome); border: 1px solid var(--chrome-edge); padding: 18px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; text-decoration: none; color: var(--navy); }
+.deck-trip.has-photo { color: #FFFFFF; border-color: rgba(255, 255, 255, 0.18); }
+.deck-trip-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.deck-trip.has-photo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(7, 11, 20, 0.2) 0%, rgba(7, 11, 20, 0.86) 78%); }
+.deck-trip-top, .deck-trip-bottom { position: relative; z-index: 1; display: flex; }
+.deck-trip-top { justify-content: space-between; align-items: center; gap: 8px; }
+.deck-trip-bottom { flex-direction: column; gap: 6px; }
+.deck-trip-tag { background: var(--navy); color: var(--cream); }
+.deck-trip.has-photo .deck-trip-tag { background: var(--cream); color: var(--navy); }
+.deck-trip-when { font-size: 12px; font-weight: 600; }
+.deck-trip .trip-name { color: inherit; font-size: 28px; }
+.deck-trip-dates { font-size: 13px; font-weight: 600; letter-spacing: 0.02em; }
+.deck-trip-saved { font-size: 12px; opacity: 0.85; }
+.deck-trip .track { width: 100%; background: rgba(15, 26, 46, 0.22); }
+.deck-trip .fill { background: var(--navy); }
+.deck-trip.has-photo .track { background: rgba(255, 255, 255, 0.25); }
+.deck-trip.has-photo .fill { background: var(--cream); }
+.deck-trip.is-past { filter: saturate(0.6); opacity: 0.85; }
+:root[data-theme='moody'] .deck a.deck-trip.deck-card { color: #0F1A2E; }
+:root[data-theme='moody'] .deck a.deck-trip.deck-card.has-photo { color: #FFFFFF; }
+.deck-trip-credit { position: relative; z-index: 1; font-size: 10px; opacity: 0.7; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trip-photo-credit { font-size: 11px; color: var(--muted); margin-top: -6px; }
 
 .ticket-card { display: flex; min-height: 170px; border-radius: 14px; overflow: hidden; background: var(--card); border: 1px solid var(--border-2); flex-basis: 250px; }
 .ticket-card .ticket-date { width: 64px; background: var(--chrome); color: var(--navy); border-right: 1px solid var(--chrome-edge); }
@@ -720,3 +722,20 @@ dialog.sheet[open] { display: flex; flex-direction: column; overflow: hidden; }
 .toward-row { display: flex; flex-direction: column; gap: 6px; color: var(--ink); text-decoration: none; }
 .toward-title { font-size: 14px; font-weight: 600; }
 :root[data-theme='moody'] .toward a.toward-row.toward-row { color: var(--ink); }
+
+/* Home track record: one dot per week, month, quarter or year */
+.track-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11px; color: var(--muted); }
+.track-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.track-legend .tdot { width: 10px; height: 10px; border-radius: 3px; }
+.track-rows { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: 12px; }
+.track-row { display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--border); color: var(--ink); text-decoration: none; min-width: 0; }
+.track-title { font-size: 14px; font-weight: 600; }
+.track-strip { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; }
+.tdot { display: inline-block; height: 22px; border-radius: 6px; background: var(--surface-3); border: 1px solid var(--border); }
+.tdot.hit { background: var(--accent); border-color: var(--accent); }
+.tdot.miss { background: var(--rust); border-color: var(--rust); opacity: 0.85; }
+.tdot.open { background: transparent; border: 2px dashed var(--accent); }
+.tdot.none { background: var(--surface-3); border: 1px dashed var(--border-2); opacity: 0.7; }
+.track-ends { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: -4px; }
+.track-row .quip { font-family: var(--serif); font-style: italic; font-size: 15px; color: var(--ink-2); }
+:root[data-theme='moody'] .track-rows a.track-row.track-row { color: var(--ink); }

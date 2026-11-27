@@ -1,8 +1,8 @@
 import { useState, type CSSProperties } from 'react';
 import { db, uid, useMeta, useTable } from '../lib/db';
 import { hrefFor } from '../lib/router';
-import { addDays, clock12, daysBetween, gapLabel, money, monthShort, normalizeUrl, parseISO, pct, shortDate, titleFromUrl, todayISO, weekdayShort } from '../lib/format';
-import type { Person, Pin, Restaurant, RestaurantList, ShowEvent, Trip } from '../lib/types';
+import { addDays, clock12, money, monthShort, normalizeUrl, parseISO, pct, shortDate, titleFromUrl, todayISO, weekdayShort } from '../lib/format';
+import type { Pin, Restaurant, RestaurantList, ShowEvent, Trip } from '../lib/types';
 import { Chips, EditButton, FileButton, Sheet, openDataUrl, readFileAsDataURL, resizePhoto, useToast } from '../components/ui';
 import { ImagePicker } from '../components/ImagePicker';
 import { PhotoPlaceholder } from './Health';
@@ -13,6 +13,7 @@ import { previewWithCover } from '../lib/preview';
 import { linkKind } from '../lib/links';
 import { LinkMedia } from '../components/LinkMedia';
 import { dayLabel } from '../lib/plan';
+import { useAutoTripCovers } from '../lib/covers';
 
 const pinLabel = (url?: string) => {
   const k = url ? linkKind(url).kind : 'other';
@@ -45,7 +46,6 @@ export function SocialCalendar({ focus }: { focus?: string }) {
   const restaurants = useTable(db.restaurants);
   const shows = useTable(db.shows, 'date');
   const calendar = useTable(db.calendar, 'date');
-  const people = useTable(db.people, 'lastContact');
   const intention = useMeta<string>('intention', '');
   const city = useMeta<string>('city', '');
   const toast = useToast();
@@ -56,9 +56,9 @@ export function SocialCalendar({ focus }: { focus?: string }) {
   const [editingPin, setEditingPin] = useState<Pin | null>(null);
   const [editingR, setEditingR] = useState<Restaurant | null>(null);
   const [sForm, setSForm] = useState({ title: '', date: '', detail: '', season: '' });
-  const [edit, setEdit] = useState<'' | 'shows' | 'people'>('');
-  const [name, setName] = useState('');
+  const [edit, setEdit] = useState<'' | 'shows'>('');
   useFocusItem(focus, restaurants.length > 0);
+  useAutoTripCovers(trips);
 
   const today = todayISO();
   const week = calendar
@@ -68,11 +68,6 @@ export function SocialCalendar({ focus }: { focus?: string }) {
   const upcomingShows = [...shows.filter((x) => x.date && x.date >= addDays(today, -1)), ...shows.filter((x) => !x.date && x.season)];
   const shownR = restaurants.filter((r) => rFilter === 'All' || r.list === rFilter);
 
-  const addPerson = () => {
-    if (!name.trim()) return;
-    void db.people.add({ id: uid(), name: name.trim(), lastContact: today, note: '' });
-    setName('');
-  };
   const onPhoto = async (file: File) => {
     try {
       const src = await resizePhoto(file);
@@ -113,7 +108,7 @@ export function SocialCalendar({ focus }: { focus?: string }) {
   return (
     <div className="stack">
       <div className="grid2">
-        <section className="card" aria-labelledby="week-h">
+        <section className="card full" aria-labelledby="week-h">
           <div className="row"><h2 className="h2" id="week-h">Plans this week</h2><span className="sub">From your calendar</span></div>
           <div>
             {week.map((e) => (
@@ -121,28 +116,6 @@ export function SocialCalendar({ focus }: { focus?: string }) {
             ))}
             {week.length === 0 && <p className="empty">No social plans on the calendar this week. Maybe time to make one.</p>}
           </div>
-        </section>
-        <section className="card" aria-labelledby="reach-h">
-          <div className="row"><h2 className="h2" id="reach-h">Reach out to</h2><span className="sub">Longest gap first</span></div>
-          <div>
-            {people.map((p) => {
-              const gap = daysBetween(p.lastContact, today);
-              return (
-                <div className="line" key={p.id}>
-                  <Avatar name={p.name} photo={p.photo} />
-                  <span className="line-main"><span>{p.name}</span><span className={`sub${gap > 30 ? ' bad-text' : ''}`}>{gap > 0 ? `${gapLabel(gap)} since you talked` : 'Talked today'}</span></span>
-                  <button type="button" className="btn2" onClick={() => { void db.people.update(p.id, { lastContact: today }); toast(`Marked ${p.name} as caught up`); }}>Caught up</button>
-                </div>
-              );
-            })}
-            {people.length === 0 && <p className="empty">Add the people you want to keep up with.</p>}
-          </div>
-          <form className="inline-add" onSubmit={(e) => { e.preventDefault(); addPerson(); }}>
-            <label htmlFor="pname" className="sr">Add a person</label>
-            <input id="pname" className="field" value={name} onChange={(e) => setName(e.target.value)} placeholder="Add a person" />
-            <button type="submit" className="btn2">Add</button>
-          </form>
-          <EditButton label="Edit people" onClick={() => setEdit('people')} />
         </section>
       </div>
 
@@ -158,17 +131,18 @@ export function SocialCalendar({ focus }: { focus?: string }) {
             const past = !!t.date && (t.endDate ?? t.date) < today;
             return (
               <a key={t.id} role="listitem" href={hrefFor('money', 'trips', t.id)} style={tilt(i)}
-                className={`deck-card trip-card${t.photo ? ' has-photo' : ''}${past ? ' is-past' : ''}`}
+                className={`deck-card deck-trip${t.photo ? ' has-photo' : ''}${past ? ' is-past' : ''}`}
                 aria-label={`${t.name}, ${tripSpan(t)}, ${t.status}`}>
-                {t.photo && <img className="trip-card-photo" src={t.photo} alt="" loading="lazy" />}
-                <span className="trip-card-top">
-                  <span className="tag trip-card-tag">{past ? 'Been' : t.status}</span>
-                  {t.date && !past && <span className="trip-card-when">{dayLabel(t.date, today)}</span>}
+                {t.photo && <img className="deck-trip-photo" src={t.photo} alt="" loading="lazy" />}
+                <span className="deck-trip-top">
+                  <span className="tag deck-trip-tag">{past ? 'Been' : t.status}</span>
+                  {t.date && !past && <span className="deck-trip-when">{dayLabel(t.date, today)}</span>}
                 </span>
-                <span className="trip-card-bottom">
+                <span className="deck-trip-bottom">
                   <span className="trip-name">{t.name}</span>
-                  <span className="trip-card-dates">{tripSpan(t)}</span>
-                  {t.cost > 0 && !past && <span className="trip-card-saved">{p >= 100 ? 'Paid for' : `${money(t.cost)} trip`}</span>}
+                  <span className="deck-trip-dates">{tripSpan(t)}</span>
+                  {t.photoCredit && <span className="deck-trip-credit" title={t.photoCredit}>Photo: {t.photoCredit}</span>}
+                  {t.cost > 0 && !past && <span className="deck-trip-saved">{p >= 100 ? 'Paid for' : `${money(t.cost)} trip`}</span>}
                 </span>
               </a>
             );
@@ -325,11 +299,6 @@ export function SocialCalendar({ focus }: { focus?: string }) {
         title="Edit shows and events" open={edit === 'shows'} onClose={() => setEdit('')} table={db.shows} rows={shows}
         fields={[{ key: 'title', label: 'What', wide: true }, { key: 'date', label: 'Date', type: 'date' }, { key: 'detail', label: 'Seat or time' }, { key: 'season', label: 'Every year in (when there is no date)', type: 'select', options: [{ value: '', label: 'Not seasonal' }, ...['Winter', 'Spring', 'Summer', 'Fall'].map((x) => ({ value: x, label: x }))] }]}
         itemName={(s) => s.title}
-      />
-      <TableEditor<Person>
-        title="Edit people" open={edit === 'people'} onClose={() => setEdit('')} table={db.people} rows={people}
-        fields={[{ key: 'name', label: 'Name' }, { key: 'lastContact', label: 'Last talked', type: 'date' }, { key: 'note', label: 'Note', wide: true }, { key: 'photo', label: 'Photo', type: 'image' }]}
-        itemName={(p) => p.name}
       />
     </div>
   );

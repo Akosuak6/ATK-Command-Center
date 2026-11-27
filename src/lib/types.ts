@@ -101,7 +101,10 @@ export interface Trip {
   saved: number; status: TripStatus;
   date: string; // first day
   endDate?: string; // last day
-  photo?: string; // shows on the trip and the vision board
+  photo?: string; // shows on the trip and on the Social calendar
+  photoCredit?: string; // who took a cover that was found for you, and its license
+  coverTried?: boolean; // a cover was looked for once, so a removed one stays off
+  coverIndex?: number; // which of the found photos is showing, for Try another cover
   whoPaid?: string; // a note on who paid what, for splitting costs
   links?: TripLink[]; // TikToks, articles and anything else saved about the place
   extras?: TripExtra[]; // other payments for the trip from the travel vault, due on their own date

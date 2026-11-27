@@ -1,0 +1,4 @@
+import { route } from '../../../src/server/adapter';
+import handler from '../../../src/server/handlers/placecover.js';
+
+export const GET = route(handler);

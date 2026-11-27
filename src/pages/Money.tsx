@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { nextTripCover, useAutoTripCovers } from '../lib/covers';
 import { db, setMeta, uid, useMeta, useTable } from '../lib/db';
 import { navigate } from '../lib/router';
 import { addDays, daysLeftInMonth, money, monthName, nextMonth, pct, sameMonth, shortDate, todayISO } from '../lib/format';
@@ -540,6 +541,9 @@ function VaultPlan({ trips }: { trips: Trip[] }) {
 export function TripPlanner({ tripId }: { tripId?: string }) {
   const wallet = useMeta<PointsWallet>('points', { card: 'Chase Sapphire Preferred', balance: 0, centsPerPoint: 1 });
   const trips = useTable(db.trips, 'date');
+  useAutoTripCovers(trips);
+  const [findingCover, setFindingCover] = useState(false);
+  const toast = useToast();
   const [edit, setEdit] = useState<'' | 'trip'>('');
   const trip = trips.find((t) => t.id === tripId) ?? trips[0];
   const { quarters } = useVaultPlan(trips);
@@ -578,7 +582,16 @@ export function TripPlanner({ tripId }: { tripId?: string }) {
       <section className="card trip-card" aria-labelledby="trip-h">
         <div className="trip-col">
           {trip.photo && <img className="trip-photo" src={trip.photo} alt={`${trip.name}`} />}
-          <span className="lbl">{trip.status} · linked to your vision board</span>
+          {(!trip.photo || trip.photoCredit) && (
+            <span className="trip-photo-credit">
+              {trip.photoCredit ? <>Photo: {trip.photoCredit}. </> : null}
+              <button type="button" className="btn-text" style={{ padding: 0, minHeight: 0, fontSize: 'inherit' }} disabled={findingCover}
+                onClick={async () => { setFindingCover(true); const ok = await nextTripCover(trip); setFindingCover(false); if (!ok) toast('No other photo found. Add your own with Edit.'); }}>
+                {findingCover ? 'Looking' : trip.photo ? 'Try another cover' : 'Find a cover'}
+              </button>
+            </span>
+          )}
+          <span className="lbl">{trip.status} · on your Social calendar</span>
           <div className="row" style={{ alignItems: 'center' }}>
             <h2 className="h2" id="trip-h" style={{ fontSize: 28 }}>{trip.name}</h2>
             <EditButton label={`Edit ${trip.name}`} onClick={() => setEdit('trip')} />

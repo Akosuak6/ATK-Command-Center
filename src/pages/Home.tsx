@@ -1,21 +1,29 @@
 import { useState } from 'react';
-import { db, uid, useMeta, useTable } from '../lib/db';
+import { db, setMeta, uid, useMeta, useTable } from '../lib/db';
 import { hrefFor } from '../lib/router';
 import { clock12, longDate, money, monthShort, pct, sameMonth, todayISO } from '../lib/format';
 import { goalProgress, learningScore, moneyScore, readThisYear, recovery, socialScore } from '../lib/calc';
 import type { Facial, Goal, HealthDay, Horizon, MoneySnapshot } from '../lib/types';
-import { Bar, Checkbox, Chips, EditButton, areaClass, useNow } from '../components/ui';
+import { Bar, Checkbox, Chips, EditButton, Sheet, areaClass, useNow } from '../components/ui';
 import { IconChevronLeft, IconChevronRight, IconTrash } from '../components/Icons';
 import { comingUp, dayLabel, goalQuip, periodFor } from '../lib/plan';
 import { TableEditor, type FieldDef } from '../components/ListEditor';
 import { DUMP_LABEL, DUMP_TAG } from './Dump';
 import { useLiveMoney } from './Money';
-import { useExportSpend } from '../lib/money';
+import { useCategoryMap, useExportSpend } from '../lib/money';
+import { fitnessRow, planGoalsRow, readingRow, spendingRow, type TrackRow } from '../lib/track';
+import type { Workout } from '../lib/hevy';
+import type { PayeeRule } from '../lib/types';
 
 const DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
 export function HomeToday() {
   const now = useNow(10000);
+  const [horizon, setHorizon] = useState<Horizon>(savedHorizon);
+  const chooseHorizon = (v: Horizon) => {
+    setHorizon(v);
+    try { localStorage.setItem('planHorizon', v); } catch { /* the view just resets next time */ }
+  };
   const today = todayISO();
   const snap = useMeta<MoneySnapshot | null>('moneySnapshot', null);
   const liveMoney = useLiveMoney();
@@ -36,7 +44,8 @@ export function HomeToday() {
   const upcoming = todays.filter((e) => e.time >= nowHM || !/^\d/.test(e.time));
 
   const arches = [
-    { label: 'Monthly budget', stat: snap ? money(liveMoney.left) : 'Add data', href: hrefFor('money', 'budget') },
+    // Left to spend this month, worked out live from your budget and Rocket Money spending.
+    { label: 'Left this month', stat: liveMoney.live || snap ? money(liveMoney.left) : 'Add data', href: hrefFor('money', 'budget') },
     { label: trip ? `${trip.name.split(/\s+/)[0]} fund` : 'Trip fund', stat: trip ? `${pct(trip.saved, trip.cost)}%` : 'Plan one', href: hrefFor('money', 'trips', trip?.id) },
     { label: 'Classes', stat: String(classes.filter((c) => sameMonth(c.date, today)).length), href: hrefFor('health', 'classes') },
     { label: 'Bookshelf', stat: `${read}/${readingGoal}`, href: hrefFor('dump', 'books') }
@@ -70,7 +79,9 @@ export function HomeToday() {
         ))}
       </div>
 
-      <HomePlan />
+      <HomePlan h={horizon} onHorizon={chooseHorizon} />
+
+      <TrackRecord h={horizon} />
 
       <div className="grid3">
         <section aria-labelledby="prio-h" className="pinned">
@@ -148,8 +159,7 @@ const savedHorizon = (): Horizon => {
 };
 
 // Goals for a week, month, quarter or year, next to everything dated in it.
-function HomePlan() {
-  const [h, setH] = useState<Horizon>(savedHorizon);
+function HomePlan({ h, onHorizon }: { h: Horizon; onHorizon: (v: Horizon) => void }) {
   const [offset, setOffset] = useState(0);
   const [draft, setDraft] = useState('');
   const [all, setAll] = useState(false);
@@ -176,10 +186,9 @@ function HomePlan() {
   const shown = all ? list : list.slice(0, SHOWN);
 
   const pick = (v: Horizon) => {
-    setH(v);
+    onHorizon(v);
     setOffset(0);
     setAll(false);
-    try { localStorage.setItem('planHorizon', v); } catch { /* the view just resets next time */ }
   };
   const add = () => {
     const t = draft.trim();
@@ -270,6 +279,75 @@ function HomePlan() {
           )}
         </section>
       </div>
+    </section>
+  );
+}
+
+const STATUS_TEXT = { hit: 'Hit', miss: 'Missed', open: 'In progress', none: 'No data' } as const;
+
+// How often you hit each goal over the last weeks, months, quarters or years.
+function TrackRecord({ h }: { h: Horizon }) {
+  const classes = useTable(db.classes);
+  const books = useTable(db.books);
+  const budget = useTable(db.budget, 'order');
+  const txns = useTable(db.transactions);
+  const periodGoals = useTable(db.periodGoals);
+  const map = useCategoryMap();
+  const rules = useMeta<PayeeRule[]>('payeeRules', []);
+  const hevy = useMeta<Workout[]>('hevyWorkouts', []);
+  const gym = useMeta<{ name?: string } | null>('gym', null);
+  const perWeek = useMeta<number>('fitnessPerWeek', 4);
+  const readingGoal = useMeta<number>('readingGoal', 20);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState({ perWeek: '', reading: '' });
+
+  const rows: TrackRow[] = [
+    fitnessRow(h, { classes, hevyDates: hevy.map((w) => w.date).filter(Boolean), gymName: gym?.name, perWeek }),
+    spendingRow(h, { txns, budget, classes, map, rules }),
+    readingRow(h, books, readingGoal),
+    planGoalsRow(h, periodGoals)
+  ];
+
+  const openEdit = () => { setDraft({ perWeek: String(perWeek), reading: String(readingGoal) }); setEditing(true); };
+  const save = async () => {
+    const w = Math.round(Number(draft.perWeek));
+    const r = Math.round(Number(draft.reading));
+    if (w > 0) await setMeta('fitnessPerWeek', w);
+    if (r > 0) await setMeta('readingGoal', r);
+    setEditing(false);
+  };
+
+  return (
+    <section className="card" aria-labelledby="track-h">
+      <div className="row row-wrap" style={{ alignItems: 'center' }}>
+        <h2 className="h2" id="track-h">Track record</h2>
+        <span className="track-legend" aria-hidden="true">
+          <span><i className="tdot hit" /> Hit</span><span><i className="tdot miss" /> Missed</span><span><i className="tdot open" /> In progress</span><span><i className="tdot none" /> No data</span>
+        </span>
+      </div>
+      <div className="track-rows">
+        {rows.map((r) => (
+          <a key={r.id} className="track-row" href={r.href}>
+            <span className="row"><strong className="track-title">{r.title}</strong><span className="sub">{r.now}</span></span>
+            <span className="track-strip" role="img" aria-label={`${r.title}: ${r.cells.map((c) => `${c.label} ${STATUS_TEXT[c.status]}`).join(', ')}`}>
+              {r.cells.map((c) => <span key={c.key} className={`tdot ${c.status}`} title={`${c.label}: ${STATUS_TEXT[c.status]}, ${c.note}`} />)}
+            </span>
+            <span className="track-ends" aria-hidden="true"><span>{r.cells[0]?.label}</span><span>{r.cells[r.cells.length - 1]?.label}</span></span>
+            <span className="quip">{r.summary}</span>
+          </a>
+        ))}
+      </div>
+      <EditButton label="Edit targets" onClick={openEdit} />
+      <Sheet title="Targets" open={editing} onClose={() => setEditing(false)}>
+        <form className="stack-s" style={{ gap: 12 }} onSubmit={(e) => { e.preventDefault(); void save(); }}>
+          <label className="lbl" htmlFor="t-week">Workouts a week</label>
+          <input id="t-week" type="number" inputMode="numeric" min={1} className="field" value={draft.perWeek} onChange={(e) => setDraft({ ...draft, perWeek: e.target.value })} />
+          <label className="lbl" htmlFor="t-read">Books a year</label>
+          <input id="t-read" type="number" inputMode="numeric" min={1} className="field" value={draft.reading} onChange={(e) => setDraft({ ...draft, reading: e.target.value })} />
+          <p className="sub">Your spending goal is your monthly budget outside rent. Change it in Money, Monthly budget.</p>
+          <button type="submit" className="btn">Save</button>
+        </form>
+      </Sheet>
     </section>
   );
 }
