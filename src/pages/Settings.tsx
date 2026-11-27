@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { exportBackup, importBackup, setMeta, useMeta } from '../lib/db';
 import { getSyncStatus, resetDevice, signOut, syncNow, useSyncStatus } from '../lib/sync';
 import { syncText } from '../components/SyncStatus';
 import { hrefFor } from '../lib/router';
-import { daysBetween, longDate, todayISO } from '../lib/format';
-import { Chips, FileButton, useToast } from '../components/ui';
+import { daysBetween, longDate, shortDate, timeOfDate, todayISO } from '../lib/format';
+import { Chips, FileButton, areaClass, useToast } from '../components/ui';
 import { getTheme, setTheme, type Theme } from '../lib/theme';
+import { CALENDAR_AREAS, addCalendar, listCalendars, removeCalendar, syncCalendars, type LinkedCalendar } from '../lib/calendars';
+import type { Area } from '../lib/types';
 
 const REMIND_AFTER_DAYS = 30;
 
@@ -73,6 +75,7 @@ export function SettingsPage() {
         <p className="body">Moody, the default, is near black navy with your chrome. Light is linen and navy. Your choice is saved on this device, so the phone and laptop can each have their own.</p>
         <Chips label="Look" value={theme} onChange={(t) => { setTheme(t); setThemeState(t); }} options={[{ value: 'light', label: 'Light' }, { value: 'moody', label: 'Moody' }]} />
       </section>
+      <CalendarsCard />
       <section className="card" aria-labelledby="sync-h">
         <h2 className="h2" id="sync-h">Sync</h2>
         <p className="body">Everything is saved on this device first and synced to your database, so the laptop and phone stay the same and the app works without signal.</p>
@@ -107,6 +110,128 @@ export function SettingsPage() {
         </button>
       </section>
     </div>
+  );
+}
+
+const syncedLabel = (iso: string | null) => {
+  if (!iso) return 'not synced yet';
+  const local = new Date(iso);
+  const day = `${local.getFullYear()}-${String(local.getMonth() + 1).padStart(2, '0')}-${String(local.getDate()).padStart(2, '0')}`;
+  return `synced ${day === todayISO() ? '' : shortDate(day) + ' '}${timeOfDate(iso)}`;
+};
+
+// Linked Google calendars. The secret address goes to the server once and is never shown again.
+function CalendarsCard() {
+  const toast = useToast();
+  const [list, setList] = useState<LinkedCalendar[] | null>(null);
+  const [problem, setProblem] = useState('');
+  const [label, setLabel] = useState('');
+  const [url, setUrl] = useState('');
+  const [area, setArea] = useState<Area>('Social');
+  const [busy, setBusy] = useState(''); // 'add', 'sync' or the id being removed
+
+  useEffect(() => {
+    let live = true;
+    listCalendars()
+      .then((c) => { if (live) { setList(c); setProblem(''); } })
+      .catch((e) => { if (live) setProblem(navigator.onLine ? (e as Error).message : 'Calendars can be linked and checked while you are online.'); });
+    return () => { live = false; };
+  }, []);
+
+  const add = async () => {
+    if (!label.trim() || !url.trim()) { toast('Add a name and the secret address'); return; }
+    setBusy('add');
+    try {
+      const r = await addCalendar({ label: label.trim(), url: url.trim(), area });
+      setList(r.calendars);
+      setLabel('');
+      setUrl('');
+      toast(`Linked ${label.trim()}, ${r.added.events} event${r.added.events === 1 ? '' : 's'}`);
+    } catch (e) {
+      toast((e as Error).message);
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const remove = async (c: LinkedCalendar) => {
+    if (!confirm(`Unlink ${c.label}? Its events leave the app on every device. Events you added by hand stay.`)) return;
+    setBusy(c.id);
+    try {
+      setList(await removeCalendar(c.id));
+      toast(`Unlinked ${c.label}`);
+    } catch (e) {
+      toast((e as Error).message);
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const syncAll = async () => {
+    setBusy('sync');
+    try {
+      const c = await syncCalendars(true);
+      if (c) setList(c);
+      const failed = c?.filter((x) => x.error).length ?? 0;
+      toast(failed ? `${failed} calendar${failed === 1 ? '' : 's'} could not be synced` : 'Calendars synced');
+    } catch (e) {
+      toast((e as Error).message);
+    } finally {
+      setBusy('');
+    }
+  };
+
+  return (
+    <section className="card full" aria-labelledby="cals-h">
+      <div className="row"><h2 className="h2" id="cals-h">Calendars</h2><span className="sub">{list?.length ? `${list.length} linked` : ''}</span></div>
+      <p className="body">Your Google calendars show on Home and on Social, on every device. Each one is linked with its secret address, which stays in your database and is never shown here again. They sync when the app opens or comes back to the front, at most every 15 minutes.</p>
+      <div className="grid2">
+        <div className="stack-s">
+          <span className="lbl">Linked</span>
+          {!list && !problem && <p className="empty">Checking your calendars</p>}
+          {problem && <p className="empty">{problem}</p>}
+          {list?.length === 0 && <p className="empty">No calendars linked yet. Add your personal one first, then work when you have it.</p>}
+          <div>
+            {list?.map((c) => (
+              <div className="line" key={c.id}>
+                <span className="line-main">
+                  <span style={{ fontWeight: 600 }}>{c.label}</span>
+                  <span className={c.error ? 'sub bad-text' : 'sub'}>
+                    {c.error ?? `${c.events} event${c.events === 1 ? '' : 's'}, ${syncedLabel(c.lastSynced)}`}
+                  </span>
+                </span>
+                <span className={areaClass(c.area)}>{c.area}</span>
+                <button type="button" className="btn-text btn-danger" onClick={() => void remove(c)} disabled={busy === c.id} aria-label={`Unlink ${c.label}`}>Remove</button>
+              </div>
+            ))}
+          </div>
+          {!!list?.length && (
+            <button type="button" className="btn2" style={{ marginTop: 'auto' }} onClick={() => void syncAll()} disabled={busy === 'sync'}>{busy === 'sync' ? 'Syncing calendars' : 'Sync calendars now'}</button>
+          )}
+        </div>
+        <form className="stack-s" onSubmit={(e) => { e.preventDefault(); void add(); }}>
+          <span className="lbl">Add a calendar</span>
+          <div className="form-2">
+            <div className="form-col">
+              <label className="lbl" htmlFor="cal-label">Name</label>
+              <input id="cal-label" className="field" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Personal" maxLength={40} autoComplete="off" />
+            </div>
+            <div className="form-col">
+              <label className="lbl" htmlFor="cal-area">Events count as</label>
+              <select id="cal-area" className="field" value={area} onChange={(e) => setArea(e.target.value as Area)}>
+                {CALENDAR_AREAS.map((a) => <option key={a} value={a}>{a}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="form-col">
+            <label className="lbl" htmlFor="cal-url">Secret address in iCal format</label>
+            <input id="cal-url" className="field" type="url" inputMode="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://calendar.google.com/calendar/ical/..." autoComplete="off" autoCapitalize="off" spellCheck={false} />
+          </div>
+          <span className="sub">In Google Calendar on a computer, open Settings, pick the calendar under Settings for my calendars, choose Integrate calendar, and copy Secret address in iCal format.</span>
+          <button type="submit" className="btn" disabled={busy === 'add' || !!problem}>{busy === 'add' ? 'Reading the calendar' : 'Add calendar'}</button>
+        </form>
+      </div>
+    </section>
   );
 }
 

@@ -204,7 +204,10 @@ export interface WishItem { id: string; text: string; tag: 'Book' | 'Try' | 'Buy
 
 export interface Person { id: string; name: string; lastContact: string; note: string; photo?: string }
 
-export interface CalendarEvent { id: string; date: string; time: string; title: string; area: Area }
+// time is "HH:MM" on a New York clock, or "All day". end is the last day of an event that spans days.
+// cal is the linked calendar an event came from (its id starts with ical-<cal>-); events added by hand have none.
+// repeats marks one occurrence of a recurring series (a weekly standup), so long views can leave them out.
+export interface CalendarEvent { id: string; date: string; time: string; title: string; area: Area; end?: string; cal?: string; repeats?: boolean }
 
 export interface HealthDay {
   date: string;

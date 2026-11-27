@@ -14,6 +14,7 @@ import { useCategoryMap, useExportSpend } from '../lib/money';
 import { fitnessRow, planGoalsRow, readingRow, spendingRow, type TrackRow } from '../lib/track';
 import type { Workout } from '../lib/hevy';
 import type { PayeeRule } from '../lib/types';
+import { byTime, onDay } from '../lib/calendars';
 
 const DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
@@ -32,6 +33,7 @@ export function HomeToday() {
   const classes = useTable(db.classes);
   const books = useTable(db.books);
   const calendar = useTable(db.calendar, 'time');
+  const calendarSyncedAt = useMeta<string | null>('calendarSyncedAt', null);
   const priorities = useTable(db.priorities, 'date');
   const dump = useTable(db.dump, 'date', true);
   const [draft, setDraft] = useState('');
@@ -39,7 +41,7 @@ export function HomeToday() {
   const h = now.getHours();
   const trip = trips.find((t) => t.date && t.date >= today) ?? trips.find((t) => !t.date) ?? trips[trips.length - 1];
   const read = readThisYear(books).length;
-  const todays = calendar.filter((e) => e.date === today);
+  const todays = calendar.filter((e) => onDay(e, today)).sort(byTime);
   const nowHM = `${String(h).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   const upcoming = todays.filter((e) => e.time >= nowHM || !/^\d/.test(e.time));
 
@@ -114,7 +116,9 @@ export function HomeToday() {
         <section className="card" aria-labelledby="cal-h">
           <div className="row"><h2 className="h2" id="cal-h">Calendar</h2><span className="sub">Today</span></div>
           <div>
-            {todays.length === 0 && <p className="empty">No events for today yet. They arrive with the Morning sync.</p>}
+            {todays.length === 0 && (calendarSyncedAt
+              ? <p className="empty">Nothing on your calendars today.</p>
+              : <p className="empty">No events today. <a href={hrefFor('settings')}>Link your Google calendars in Settings</a> to bring them in.</p>)}
             {todays.map((e) => (
               <div className="line" key={e.id}>
                 <span className="cal-time">{clock12(e.time)}</span>

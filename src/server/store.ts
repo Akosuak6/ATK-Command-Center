@@ -7,8 +7,8 @@ import { neon } from '@neondatabase/serverless';
 // database migrations. `ts` is when the row was last edited on a device (last write wins);
 // `seq` goes up on every change so devices can ask for "everything after seq N".
 
-type Row = Record<string, unknown>;
-type Query = (text: string, params?: unknown[]) => Promise<Row[]>;
+export type Row = Record<string, unknown>;
+export type Query = (text: string, params?: unknown[]) => Promise<Row[]>;
 
 const SCHEMA = [
   'create sequence if not exists cc_rows_seq',
@@ -23,7 +23,20 @@ const SCHEMA = [
     primary key (tbl, id)
   )`,
   'create index if not exists cc_rows_seq_idx on cc_rows (seq)',
-  'create table if not exists cc_login_failures (at timestamptz not null default now())'
+  'create table if not exists cc_login_failures (at timestamptz not null default now())',
+  // Linked calendars. The address is a secret (anyone holding it can read the calendar), so it stays
+  // here on the server: it is never synced to devices or sent back to the app, only the label is.
+  `create table if not exists cc_calendars (
+    id text primary key,
+    label text not null,
+    url text not null,
+    area text not null,
+    added timestamptz not null default now(),
+    tried_at timestamptz,
+    synced_at timestamptz,
+    error text,
+    events integer not null default 0
+  )`
 ];
 
 const g = globalThis as typeof globalThis & { __ccQuery?: Promise<Query | null> };
