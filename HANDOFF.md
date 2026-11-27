@@ -28,6 +28,8 @@ The repo is public. Real data never goes in `src/data/seed.json`.
 
 ## Owner preferences
 
+- Merge finished work into the main branch, `claude/life-command-center-46qqa6`, every time (open a pull request and merge it), so the deployed app always has the latest version. Do not leave work sitting on a side branch.
+
 - The feed scraper stays an independent program: plain code making ordinary requests from the machine it runs on (the laptop, or the app's own server), identified as an RSS reader. Never route fetching through an AI tool, agent or AI model API, since sites block those. Keep `scraper/` free of dependencies on the app so it runs on its own.
 
 - Light mode only, palette and fonts as in the brief; no dashes or em dashes in app copy; section titles never end in a period; no emoji icons.
