@@ -225,3 +225,32 @@ export interface Meta {
   key: string;
   value: unknown;
 }
+
+// A story in the feed (Dump, Feed). Pulled from public feeds by api/feed.js, or pasted by you.
+export type FeedKind = 'article' | 'linkedin' | 'newsletter';
+export interface FeedItem {
+  id: string; // stable hash of the story's address
+  url: string;
+  title: string;
+  summary: string;
+  source: string; // publisher, e.g. Vogue
+  site: string; // publisher's host
+  sourceId: string; // the feed or search that found it, or 'pasted'
+  date: string; // ISO date and time published
+  image?: string; // remote image address
+  author?: string;
+  topics: string[];
+  rel: number; // how much it counts when ranking
+  kind: FeedKind;
+  also?: string[]; // other outlets that ran the same story
+  firstSeen: string; // when it first reached this phone
+  saved?: string; // the Dump item it was saved as
+  hidden?: boolean;
+  read?: boolean;
+  manual?: boolean; // pasted by you, never pruned
+}
+
+// Your own feed sources and preferences. Stored in meta 'feedSettings'.
+export interface CustomFeedSource { id: string; name: string; url?: string; query?: string; domain: 'health' | 'fashion' | 'both' | ''; keep: 'all' | 'match'; topics: string[] }
+export interface FeedSettings { skip: string[]; custom: CustomFeedSource[]; mutedTopics: string[] }
+export interface FeedSourceStatus { id: string; name: string; ok: boolean; found: number; kept: number; error: string }

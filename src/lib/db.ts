@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import seed from 'virtual:seed';
 import { addDays, todayISO } from './format';
 import type {
-  Account, Bill, Book, Studio, Transaction, BudgetCategory, CalendarEvent, DumpItem, FitnessClass, Goal, Habit, HealthDay,
+  Account, Bill, Book, Studio, Transaction, BudgetCategory, CalendarEvent, DumpItem, FeedItem, FitnessClass, Goal, Habit, HealthDay,
   Meta, Person, Pin, Priority, Restaurant, RoadmapItem, SavingsGoal, ShowEvent, SkincareStep, Supplement,
   Trim, Trip, WishItem
 } from './types';
@@ -34,6 +34,7 @@ export class CommandCenterDB extends Dexie {
   health!: Table<HealthDay, string>;
   studios!: Table<Studio, string>;
   transactions!: Table<Transaction, string>;
+  feed!: Table<FeedItem, string>;
 
   constructor() {
     super('akosua-command-center');
@@ -151,6 +152,8 @@ export class CommandCenterDB extends Dexie {
         }
       }
     });
+    // Version 11: the feed of healthcare and fashion stories.
+    this.version(11).stores({ feed: 'id, date, sourceId' });
     this.on('populate', (tx) => {
       const data = resolveTokens(seed, todayISO()) as Record<string, unknown>;
       for (const [name, rows] of Object.entries(data)) {
