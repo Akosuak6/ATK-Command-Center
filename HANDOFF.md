@@ -27,9 +27,11 @@ The repo is public. Real data never goes in `src/data/seed.json`.
 
 ## Owner preferences
 
-- Light mode only, palette and fonts as in the brief; no dashes or em dashes in app copy; section titles never end in a period; no emoji icons.
+- Two looks, chosen per device in Settings, Look: **Moody** is the default (near black navy, deep navy cards, cream text, chrome kept) and **Light** is the original linen and navy. Moody is `:root[data-theme='moody']` in `src/styles.css`; `index.html` sets it before the first paint and `src/lib/theme.ts` switches it. Use the color variables, never hard coded colors, so both looks work.
+- Fonts as in the brief; no dashes or em dashes in app copy; section titles never end in a period; no emoji icons.
 - Budget is built for saving: savings come first, spending gets what is left.
-- Chart colors are the validated set in `src/components/Charts.tsx`; keep legends for two or more series.
+- Chart colors are the `--series-*` variables (light values validated in `src/components/Charts.tsx`, lighter tints for Moody); keep legends for two or more series.
+- No empty space on wide screens: card and box rows stretch to fill each row.
 
 ## Run and check
 

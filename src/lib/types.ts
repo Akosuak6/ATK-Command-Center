@@ -37,7 +37,7 @@ export interface Book {
   isbn?: string;
 }
 
-export type ClassType = 'Pilates' | 'Hot Pilates' | 'Yoga' | 'Hot Yoga' | 'Barre' | 'Spin' | 'HIIT' | 'Boxing' | 'Gym' | 'Run';
+export type ClassType = 'Pilates' | 'Hot Pilates' | 'Yoga' | 'Hot Yoga' | 'Barre' | 'Strength' | 'Spin' | 'HIIT' | 'Boxing' | 'Gym' | 'Run';
 
 export interface Studio {
   id: string;
@@ -49,6 +49,8 @@ export interface Studio {
   logo?: string;
   website?: string; // the logo is found from here
   logoTried?: boolean;
+  tags?: string; // e.g. "Mat Pilates, Sculpt, Heated"
+  location?: string; // neighborhood or branch, e.g. "Chelsea" or "Chelsea, Tribeca"
 }
 export interface FitnessClass {
   id: string;
@@ -58,9 +60,14 @@ export interface FitnessClass {
   studio: string;
   instructor: string;
   price: number;
-  rating: number;
+  rating: number; // overall stars; worked out from the five scores below when any are set
+  credits?: number; // paid with ClassPass credits instead of dollars (price is then 0)
+  free?: boolean; // a free class, like a studio promo
+  location?: string; // which of the studio's locations, e.g. "Upper East Side"
   notes: string;
   photo?: string; // JPEG data URL, or an image URL if it could not be copied
+  // Scores from 1 to 5 (sweat is no longer asked). Cost is value for money, so higher is better value.
+  rSweat?: number; rSculpt?: number; rStudio?: number; rCoach?: number; rCost?: number;
 }
 
 export interface Priority { id: string; text: string; done: boolean; date: string }
@@ -88,13 +95,27 @@ export interface ShowEvent {
 }
 
 export type TripStatus = 'Booked' | 'Planning' | 'Dreaming';
-export interface Trip { id: string; name: string; cost: number; months: number; saved: number; status: TripStatus; date: string; photo?: string; estimate?: boolean; points?: number; pointsValue?: number } // pointsValue: dollars the points cover
+export interface Trip {
+  id: string; name: string; cost: number;
+  months?: number; // older trips only: months are now worked out from the trip date
+  saved: number; status: TripStatus;
+  date: string; // first day
+  endDate?: string; // last day
+  photo?: string; // shows on the trip and the vision board
+  whoPaid?: string; // a note on who paid what, for splitting costs
+  links?: TripLink[]; // TikToks, articles and anything else saved about the place
+  extras?: TripExtra[]; // other payments for the trip from the travel vault, due on their own date
+
+  estimate?: boolean; points?: number; pointsValue?: number; // pointsValue: dollars the points cover
+}
+export interface TripLink { id: string; url: string; title?: string; site?: string; cover?: string }
+export interface TripExtra { label: string; amount: number; due: string } // e.g. a wedding gift sent before the trip
 
 export interface PointsWallet { card: string; balance: number; centsPerPoint: number }
 
 export interface Trim { id: string; order: number; label: string; how: string; cap: number }
 
-export type GoalLink = 'none' | 'books' | 'classes' | `trip:${string}` | `savings:${string}`;
+export type GoalLink = 'none' | 'books' | 'classes' | 'networth' | `trip:${string}` | `savings:${string}`;
 export interface Goal {
   id: string;
   order: number;
@@ -105,7 +126,7 @@ export interface Goal {
   link: GoalLink;
   pct: number; // used when link is none
   steps: string; // progress text when link is none
-  target: number; // classes per month when link is classes
+  target: number; // classes per month when link is classes; dollars when link is networth
   achieved: boolean;
 }
 
@@ -140,6 +161,8 @@ export interface SavingsGoal {
   contributing?: boolean; // false: still invested, but no new money goes in
   fromPaycheck?: boolean; // taken out before take home pay, like a 401k
   note?: string;
+  refill?: 'quarterly'; // once built, only topped back up at quarter ends (Mar 31, Jun 30, Sep 30, Dec 31)
+  builtAt?: string; // the day it first reached its target; before that it fills every month
 }
 
 export interface RoadmapItem { id: string; year: string; title: string; detail: string; tag: string }
@@ -224,4 +247,27 @@ export interface MoneySnapshot {
 export interface Meta {
   key: string;
   value: unknown;
+}
+
+// One row per day of the numbers that are only ever stored as their current value
+// (balances, goal progress, shelf counts). Anything with its own dates (transactions,
+// classes, habits, workouts, dump items) is worked out from those rows instead.
+export interface DaySnapshot {
+  date: string; // YYYY-MM-DD, local
+  savedAt: string; // last time today's row was written
+  sample: boolean; // true while the app still shows sample data; charts skip these
+  money: {
+    accountsTotal: number; // sum of every account balance (debt is negative)
+    byGroup: Partial<Record<AccountGroup, number>>;
+    accounts: Record<string, number>; // account id -> balance
+    savings: Record<string, number>; // savings goal id -> saved
+    trips: Record<string, number>; // trip id -> saved
+    netWorth: number; // the Money page's net worth figure
+    savingsRate: number;
+    leftToSpend: number;
+  };
+  goals: Record<string, number>; // goal id -> percent done
+  books: { read: number; reading: number; wantToRead: number; readThisYear: number };
+  dump: { total: number; watchlist: number };
+  people: Record<string, string>; // person id -> last contact date
 }

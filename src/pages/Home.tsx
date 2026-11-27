@@ -145,10 +145,11 @@ export function HomeGoals() {
   const dump = useTable(db.dump);
   const health = useTable(db.health, 'date', true);
   const habits = useTable(db.habits);
+  const accounts = useTable(db.accounts, 'order');
   const readingGoal = useMeta<number>('readingGoal', 20);
   const snap = useMeta<MoneySnapshot | null>('moneySnapshot', null);
   const [editing, setEditing] = useState(false);
-  const ctx = { trips, books, classes, savings, readingGoal };
+  const ctx = { trips, books, classes, savings, readingGoal, accounts };
 
   const active = goals.filter((g) => !g.achieved);
   const achieved = goals.filter((g) => g.achieved);
@@ -157,6 +158,7 @@ export function HomeGoals() {
     { value: 'none', label: 'Manual percent' },
     { value: 'books', label: 'Bookshelf (reading goal)' },
     { value: 'classes', label: 'Classes this month' },
+    { value: 'networth', label: 'Net worth (all accounts)' },
     ...trips.map((t) => ({ value: `trip:${t.id}`, label: `Trip: ${t.name}` })),
     ...savings.map((s) => ({ value: `savings:${s.id}`, label: `Savings: ${s.name}` }))
   ];
@@ -167,7 +169,7 @@ export function HomeGoals() {
     { key: 'due', label: 'Deadline', type: 'date' },
     { key: 'link', label: 'Progress comes from', type: 'select', options: linkOptions },
     { key: 'pct', label: 'Percent (manual only)', type: 'number' },
-    { key: 'target', label: 'Sessions a month (classes only)', type: 'number' },
+    { key: 'target', label: 'Target: sessions a month for classes, dollars for net worth', type: 'number' },
     { key: 'steps', label: 'Action steps or progress text', wide: true, placeholder: 'e.g. 14 of 22 action steps done' }
   ];
 
@@ -192,7 +194,8 @@ export function HomeGoals() {
     const href = g.link === 'books' ? hrefFor('dump', 'books')
       : g.link === 'classes' ? hrefFor('health', 'classes')
       : g.link.startsWith('trip:') ? hrefFor('money', 'trips', g.link.slice(5))
-      : g.link.startsWith('savings:') ? hrefFor('money', 'goals') : null;
+      : g.link.startsWith('savings:') ? hrefFor('money', 'goals')
+      : g.link === 'networth' ? hrefFor('money', 'overview') : null;
     return (
       <div className="card goal-card">
         <div className="goal-cap chrome"><span className="num">{p.pct}%</span>{g.achieved && <span className="tag t-health">Achieved</span>}</div>

@@ -66,33 +66,43 @@ function titleFromBookUrl(u: string) {
   }
 }
 
-interface OLSearch { docs?: { key?: string; title?: string; author_name?: string[]; cover_i?: number; isbn?: string[] }[] }
+interface OLEdition { title?: string; cover_i?: number; isbn?: string[]; language?: string[] }
+interface OLSearch { docs?: { key?: string; title?: string; author_name?: string[]; cover_i?: number; isbn?: string[]; editions?: { docs?: OLEdition[] } }[] }
+// Open Library sometimes keeps a translated book's blurb in another language. English text is full of these words.
+const COMMON = new Set(['the', 'and', 'of', 'to', 'is', 'her', 'his', 'she', 'he', 'that', 'with', 'for', 'it', 'as', 'this', 'by', 'an', 'from', 'their', 'who']);
+const english = (t: string) => { const w = String(t || '').toLowerCase().match(/[a-z']+/g) || []; return w.length < 8 || w.filter((x) => COMMON.has(x)).length / w.length >= 0.1; };
+const latin = (s = '') => !!s && !/[^\u0000-\u024F\s]/.test(s);
 interface OLWork { description?: string | { value?: string } }
 interface GBResult { items?: { volumeInfo?: { title?: string; authors?: string[]; description?: string; imageLinks?: { thumbnail?: string } }; saleInfo?: { retailPrice?: { amount?: number; currencyCode?: string }; buyLink?: string } }[] }
 
 async function fromDatabases(q: string, isbn: string): Promise<BookInfo | null> {
   const query = isbn ? `isbn:${isbn}` : q;
   const [ol, gb] = await Promise.all([
-    getJSON<OLSearch>(`https://openlibrary.org/search.json?q=${encodeURIComponent(isbn || q)}&limit=1&fields=key,title,author_name,cover_i,isbn`),
-    getJSON<GBResult>(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=1&printType=books`)
+    getJSON<OLSearch>(`https://openlibrary.org/search.json?q=${encodeURIComponent(isbn || q)}&limit=1&lang=en&fields=key,title,author_name,cover_i,isbn,editions,editions.title,editions.cover_i,editions.isbn,editions.language`),
+    getJSON<GBResult>(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=1&printType=books${isbn ? '' : '&langRestrict=en'}`)
   ]);
   const d = ol?.docs?.[0];
   const v = gb?.items?.[0];
+  // A translated book is listed under its original title; this is the English edition Open Library matched.
+  const e = d?.editions?.docs?.[0];
+  const en = e && (!e.language || e.language.includes('eng')) ? e : undefined;
+  const olAuthor = latin(d?.author_name?.[0]) ? d?.author_name?.[0] : '';
   if (!d && !v) return null;
   const work = d?.key ? await getJSON<OLWork>(`https://openlibrary.org${d.key}.json`) : null;
-  const olDesc = typeof work?.description === 'string' ? work.description : work?.description?.value ?? '';
+  const olRaw = typeof work?.description === 'string' ? work.description : work?.description?.value ?? '';
+  const olDesc = english(olRaw) ? olRaw : '';
   const gbImg = v?.volumeInfo?.imageLinks?.thumbnail?.replace(/^http:/, 'https:').replace(/zoom=\d/, 'zoom=2');
   const price = v?.saleInfo?.retailPrice;
   return {
-    title: d?.title || v?.volumeInfo?.title || q,
-    author: d?.author_name?.[0] || v?.volumeInfo?.authors?.[0] || '',
-    cover: d?.cover_i ? `https://covers.openlibrary.org/b/id/${d.cover_i}-L.jpg` : gbImg,
+    title: en?.title || d?.title || v?.volumeInfo?.title || q,
+    author: olAuthor || v?.volumeInfo?.authors?.[0] || d?.author_name?.[0] || '',
+    cover: en?.cover_i || d?.cover_i ? `https://covers.openlibrary.org/b/id/${en?.cover_i || d?.cover_i}-L.jpg` : gbImg,
     description: strip(olDesc || v?.volumeInfo?.description || ''),
     price: price?.amount,
     currency: price?.currencyCode,
     buyUrl: v?.saleInfo?.buyLink,
     store: v?.saleInfo?.buyLink ? 'Google Books' : undefined,
-    isbn: isbn || d?.isbn?.find((x) => /^97[89]/.test(x))
+    isbn: isbn || [...(en?.isbn ?? []), ...(d?.isbn ?? [])].find((x) => /^97[89]/.test(x))
   };
 }
 
@@ -101,7 +111,7 @@ export async function lookupBook(input: string): Promise<BookInfo | null> {
   if (!raw) return null;
   const isUrl = looksLikeUrl(raw);
   const url = isUrl ? normalizeUrl(raw) : '';
-  let info = await getJSON<BookInfo>(`/api/book?${isUrl ? `url=${encodeURIComponent(url)}` : `q=${encodeURIComponent(raw)}`}`, 12000);
+  let info = await getJSON<BookInfo>(`/api/book?en=1&${isUrl ? `url=${encodeURIComponent(url)}` : `q=${encodeURIComponent(raw)}`}`, 12000);
   if (!info?.title) {
     info = await fromDatabases(isUrl ? titleFromBookUrl(url) : raw, isUrl ? isbnFromUrl(url) : '');
     if (info && isUrl) {

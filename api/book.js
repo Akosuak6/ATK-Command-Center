@@ -40,6 +40,14 @@ function jsonLd(html) {
   return out.find((x) => /Book|Product/i.test([].concat(x['@type'] || []).join(' '))) || null;
 }
 
+// Names in Latin letters. Open Library lists a translated book under its original title and author,
+// so a name in another script means the English edition's author should come from Google Books.
+const latin = (s) => !!s && !/[^\u0000-\u024F\s]/.test(s);
+
+// Open Library sometimes keeps a translated book's blurb in another language. English text is full of these words.
+const COMMON = new Set(['the', 'and', 'of', 'to', 'is', 'her', 'his', 'she', 'he', 'that', 'with', 'for', 'it', 'as', 'this', 'by', 'an', 'from', 'their', 'who']);
+const english = (t) => { const w = String(t || '').toLowerCase().match(/[a-z']+/g) || []; return w.length < 8 || w.filter((x) => COMMON.has(x)).length / w.length >= 0.1; };
+
 const isbnFrom = (s) => {
   const m = /(97[89]\d{10})/.exec(s) || /\/dp\/(\d{9}[\dX])\b/i.exec(s) || /\/(\d{9}[\dX])(?:[/?]|$)/.exec(s);
   return m ? m[1] : '';
@@ -66,13 +74,23 @@ async function openLibrary({ isbn, q }) {
       }
     }
     if (!work && q) {
-      const s = await json(`https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=1&fields=key,title,author_name,cover_i,isbn`);
+      const s = await json(`https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=1&lang=en&fields=key,title,author_name,cover_i,isbn,editions,editions.title,editions.cover_i,editions.isbn,editions.language,author_key`);
       const d = s?.docs?.[0];
       if (d) {
-        title = title || d.title || '';
+        // The edition Open Library matched in English, when the book was translated.
+        const e = d.editions?.docs?.[0];
+        const en = e && (!e.language || e.language.includes('eng')) ? e : null;
+        title = title || en?.title || d.title || '';
         author = d.author_name?.[0] || '';
-        if (d.cover_i) cover = cover || `https://covers.openlibrary.org/b/id/${d.cover_i}-L.jpg`;
-        isbn = isbn || (d.isbn || []).find((x) => /^97[89]/.test(x)) || '';
+        // A name in another script: the author record usually also has it in English.
+        if (author && !latin(author) && d.author_key?.[0]) {
+          const a = await json(`https://openlibrary.org/authors/${d.author_key[0]}.json`);
+          const names = [a?.personal_name, ...(a?.alternate_names || [])].filter((x) => latin(x) && !x.includes(',') && x !== x.toUpperCase());
+          author = names[0] || author;
+        }
+        const coverId = en?.cover_i || d.cover_i;
+        if (coverId) cover = cover || `https://covers.openlibrary.org/b/id/${coverId}-L.jpg`;
+        isbn = isbn || [...(en?.isbn || []), ...(d.isbn || [])].find((x) => /^97[89]/.test(x)) || '';
         if (d.key) work = await json(`https://openlibrary.org${d.key}.json`);
       }
     }
@@ -81,7 +99,8 @@ async function openLibrary({ isbn, q }) {
       author = a?.name || '';
     }
     if (work && !cover && work.covers?.[0] > 0) cover = `https://covers.openlibrary.org/b/id/${work.covers[0]}-L.jpg`;
-    const description = typeof work?.description === 'string' ? work.description : work?.description?.value || '';
+    const raw = typeof work?.description === 'string' ? work.description : work?.description?.value || '';
+    const description = english(raw) ? raw : '';
     return { title: title || work?.title || '', author, cover, description: decode(description).replace(/\(\[source\].*$/i, '').trim(), isbn };
   } catch {
     return {};
@@ -91,7 +110,7 @@ async function openLibrary({ isbn, q }) {
 async function googleBooks({ isbn, q }) {
   try {
     const query = isbn ? `isbn:${isbn}` : q;
-    const j = await json(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=1&printType=books`);
+    const j = await json(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=1&printType=books${isbn ? '' : '&langRestrict=en'}`);
     const v = j?.items?.[0];
     if (!v) return {};
     const info = v.volumeInfo || {};
@@ -142,11 +161,12 @@ export default async function handler(req, res) {
   const query = q || [book.title, book.author].filter(Boolean).join(' ');
   if (!book.description || book.description.length < 120 || !book.cover || !book.author || !book.title) {
     const ol = await openLibrary({ isbn: book.isbn, q: query });
-    const gb = (!ol.description && (!book.description || book.description.length < 120)) || !(book.cover || ol.cover) ? await googleBooks({ isbn: book.isbn || ol.isbn, q: query || ol.title }) : {};
+    const olAuthor = latin(ol.author) ? ol.author : '';
+    const gb = (!ol.description && (!book.description || book.description.length < 120)) || !(book.cover || ol.cover) || (!book.author && !olAuthor) ? await googleBooks({ isbn: book.isbn || ol.isbn, q: query || ol.title }) : {};
     book = {
       ...book,
       title: book.title || ol.title || gb.title || '',
-      author: book.author || ol.author || gb.author || '',
+      author: book.author || olAuthor || gb.author || ol.author || '',
       cover: book.cover || ol.cover || gb.cover || '',
       description: book.description && book.description.length > 120 ? book.description : (ol.description || gb.description || book.description || ''),
       isbn: book.isbn || ol.isbn || gb.isbn || '',

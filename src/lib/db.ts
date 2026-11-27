@@ -5,7 +5,7 @@ import { addDays, todayISO } from './format';
 import type {
   Account, Bill, Book, Studio, Transaction, BudgetCategory, CalendarEvent, DumpItem, FitnessClass, Goal, Habit, HealthDay,
   Meta, Person, Pin, Priority, Restaurant, RoadmapItem, SavingsGoal, ShowEvent, SkincareStep, Supplement,
-  Trim, Trip, WishItem
+  Trim, Trip, WishItem, DaySnapshot
 } from './types';
 
 export class CommandCenterDB extends Dexie {
@@ -34,6 +34,7 @@ export class CommandCenterDB extends Dexie {
   health!: Table<HealthDay, string>;
   studios!: Table<Studio, string>;
   transactions!: Table<Transaction, string>;
+  history!: Table<DaySnapshot, string>;
 
   constructor() {
     super('akosua-command-center');
@@ -89,6 +90,8 @@ export class CommandCenterDB extends Dexie {
       }
     });
     // Version 10: replace the untouched sample accounts with the seed ones.
+    // Version 11: one saved row per day of the numbers that only exist as today's value (see history.ts).
+    this.version(11).stores({ history: 'date' });
     this.version(10).stores({}).upgrade(async (tx) => {
       const rows = (seed as { accounts?: { id: string }[] }).accounts ?? [];
       const current = (await tx.table('accounts').toArray()) as { id: string }[];

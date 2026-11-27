@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { exportBackup, importBackup, resetToSeed, setMeta, useMeta } from '../lib/db';
 import { hrefFor } from '../lib/router';
 import { daysBetween, longDate, todayISO } from '../lib/format';
-import { FileButton, useToast } from '../components/ui';
+import { Chips, FileButton, useToast } from '../components/ui';
+import { getTheme, setTheme, type Theme } from '../lib/theme';
 
 const REMIND_AFTER_DAYS = 30;
 
@@ -36,6 +37,7 @@ export function SettingsPage() {
   const lastBackup = useMeta<string | null>('lastBackup', null);
   const sample = useMeta<boolean>('sampleData', false);
   const [busy, setBusy] = useState(false);
+  const [theme, setThemeState] = useState<Theme>(getTheme);
 
   const doExport = async () => {
     setBusy(true);
@@ -61,6 +63,11 @@ export function SettingsPage() {
 
   return (
     <div className="grid2">
+      <section className="card full" aria-labelledby="look-h">
+        <h2 className="h2" id="look-h">Look</h2>
+        <p className="body">Moody, the default, is near black navy with your chrome. Light is linen and navy. Your choice is saved on this device, so the phone and laptop can each have their own.</p>
+        <Chips label="Look" value={theme} onChange={(t) => { setTheme(t); setThemeState(t); }} options={[{ value: 'light', label: 'Light' }, { value: 'moody', label: 'Moody' }]} />
+      </section>
       <section className="card" aria-labelledby="backup-h">
         <h2 className="h2" id="backup-h">Backups</h2>
         <p className="body">Everything lives only on this phone. Export a backup about once a month and keep it in Files or iCloud Drive. It includes photos and tickets.</p>

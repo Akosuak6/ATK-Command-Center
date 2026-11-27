@@ -22,6 +22,14 @@ export function addDays(iso: string, n: number): string {
   return toISO(d);
 }
 
+// The same day next month, or the month's last day when it is shorter (Jan 31 -> Feb 28).
+export function nextMonth(iso: string): string {
+  const d = parseISO(iso);
+  const day = d.getDate();
+  const last = new Date(d.getFullYear(), d.getMonth() + 2, 0).getDate();
+  return toISO(new Date(d.getFullYear(), d.getMonth() + 1, Math.min(day, last)));
+}
+
 export function daysBetween(a: string, b: string): number {
   return Math.round((parseISO(b).getTime() - parseISO(a).getTime()) / 86400000);
 }
@@ -30,6 +38,10 @@ export function money(n: number): string {
   const v = Math.round(Number(n) || 0);
   return (v < 0 ? '-$' : '$') + Math.abs(v).toLocaleString('en-US');
 }
+
+// Capitalize the first letter of each word and leave the rest as typed:
+// "fuze house" -> "Fuze House", "physique57" -> "Physique57", "SLT" stays "SLT".
+export const titleCase = (s: string) => s.replace(/(^|[\s(/-])(\p{Ll})/gu, (_m, before: string, letter: string) => before + letter.toUpperCase());
 
 export function shortDate(iso?: string): string {
   if (!iso) return '';

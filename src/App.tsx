@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { SECTIONS, hrefFor, sectionById, useRoute, type SectionId } from './lib/router';
 import { useMeta } from './lib/db';
-import { addDays, bannerDate, daysBetween, shortDate, timeOfDate, todayISO } from './lib/format';
+import { bannerDate, daysBetween, nextMonth, shortDate, timeOfDate, todayISO } from './lib/format';
 import type { MoneySnapshot } from './lib/types';
 import { IconDump, IconHealth, IconHome, IconMoney, IconSettings, IconSocial, IconWork } from './components/Icons';
 import { TrendCards } from './components/TrendCards';
@@ -10,7 +10,8 @@ import { BackupReminder } from './pages/Settings';
 import { HomeToday, HomeGoals } from './pages/Home';
 import { DumpAll, Bookshelf } from './pages/Dump';
 import { MoneyOverview, MoneyBudget, MoneyGoals, TripPlanner } from './pages/Money';
-import { HealthToday, HealthClasses, HealthRoutines } from './pages/Health';
+import { HealthClasses, HealthRoutines } from './pages/Health';
+import { HealthWorkouts } from './pages/Workouts';
 import { VisionBoard, PeoplePlans } from './pages/Social';
 import { WorkSoon } from './pages/Work';
 import { SettingsPage } from './pages/Settings';
@@ -28,8 +29,8 @@ const PAGES: Record<string, (p: { param?: string }) => ReactNode> = {
   'money/budget': () => <MoneyBudget />,
   'money/goals': () => <MoneyGoals />,
   'money/trips': ({ param }) => <TripPlanner tripId={param} />,
-  'health/today': () => <HealthToday />,
   'health/classes': ({ param }) => <HealthClasses focus={param} />,
+  'health/workouts': () => <HealthWorkouts />,
   'health/routines': () => <HealthRoutines />,
   'social/board': ({ param }) => <VisionBoard focus={param} />,
   'social/people': () => <PeoplePlans />,
@@ -149,7 +150,7 @@ function StatusBlock() {
     return `synced ${d === today ? '' : shortDate(d) + ' '}${timeOfDate(iso)}`.trim();
   };
   const exportDate = snap?.asOf;
-  const due = exportDate ? addDays(exportDate, 7) : null;
+  const due = exportDate ? nextMonth(exportDate) : null;
   const dueIn = due ? daysBetween(today, due) : null;
   const exportDot = dueIn === null ? 'off' : dueIn < 0 ? 'bad' : dueIn <= 3 ? 'warn' : '';
   return (

@@ -45,16 +45,27 @@ export const SPECIAL = { MOVED: 'MOVED', INVEST: 'INVEST', IGNORE: 'IGNORE' } as
 // The budget category a transaction counts toward, after your choices and rules.
 export function labelFor(t: Transaction, map: Record<string, string>, rules: PayeeRule[]): string {
   if (t.label) return t.label;
-  const who = payee(t.name).toLowerCase();
-  const rule = rules.find((r) => who && who.includes(r.match.toLowerCase()));
+  const rule = ruleFor(t, rules);
   if (rule) return rule.label;
   return map[t.category] ?? 'Unmapped';
 }
 
+// A rule matches the person on a Venmo or Zelle payment, or a whole word in the transaction name
+// (so "Remitly" catches "RMTLY* REMITLY.COM", and "Mom" does not catch "MOMOYA").
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+export function ruleFor(t: Transaction, rules: PayeeRule[]): PayeeRule | undefined {
+  const who = payee(t.name).toLowerCase();
+  return rules.find((r) => {
+    const m = r.match.trim().toLowerCase();
+    if (!m) return false;
+    if (who && who.includes(m)) return true;
+    return new RegExp(`\\b${escapeRe(m)}\\b`, 'i').test(t.name);
+  });
+}
+
 export const needsReview = (t: Transaction, rules: PayeeRule[] = []) => {
   if (t.kind !== 'spend' || t.label || !PEER.test(t.name)) return false;
-  const who = payee(t.name).toLowerCase();
-  return !rules.some((r) => who && who.includes(r.match.toLowerCase()));
+  return !ruleFor(t, rules);
 };
 
 // Spending this month per budget category, from imported transactions.

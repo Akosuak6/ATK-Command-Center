@@ -1,5 +1,5 @@
 import { addDays, clamp, daysBetween, monthYear, money, monthsUntil, pct, sameMonth, todayISO } from './format';
-import type { Book, BudgetCategory, CalendarEvent, FitnessClass, Goal, HealthDay, Person, SavingsGoal, Trim, Trip } from './types';
+import type { Account, Book, BudgetCategory, CalendarEvent, FitnessClass, Goal, HealthDay, Person, SavingsGoal, Trim, Trip } from './types';
 
 // Money
 
@@ -14,8 +14,13 @@ export function budgetSpent(cat: BudgetCategory, classes: FitnessClass[], fromEx
   return cat.spent;
 }
 
+// Months left to save, from today to the trip date (at least 1, so a trip this month still has a plan).
+export function tripMonths(t: Trip, ref = todayISO()) {
+  return t.date ? Math.max(1, monthsUntil(t.date, ref)) : Math.max(1, t.months || 1);
+}
+
 export function tripMonthly(t: Trip) {
-  return cashLeft(t) / Math.max(1, t.months || 1);
+  return cashLeft(t) / tripMonths(t);
 }
 
 // What a trip still needs in cash, after what is saved and what points will cover.
@@ -30,7 +35,32 @@ export interface AffordResult {
   impacts: { goal: string; impact: string; good: boolean }[];
 }
 
-export function affordCheck(price: number, left: number, goals: { name: string; monthly: number }[], daysLeft: number): AffordResult {
+// cat: the budget category the purchase belongs to, with what is left in it this month.
+// The verdict checks that category first, then the month as a whole, then your goals.
+export function affordCheck(price: number, left: number, goals: { name: string; monthly: number }[], daysLeft: number, cat?: { label: string; left: number }): AffordResult {
+  const noDelay = goals.map((g) => ({ goal: g.name, impact: 'No delay', good: true }));
+  if (cat) {
+    const name = cat.label.toLowerCase();
+    if (price <= cat.left) {
+      const after = cat.left - price;
+      // In this category's budget, but the month as a whole is already spent past its limit.
+      if (price > left) {
+        return { tone: 'tight', verdict: `In your ${name} budget, but the month is over`, detail: `${money(cat.left)} is left for ${name}, but with this your spending would be ${money(price - left)} past what the whole month allows. Skip it if you can.`, impacts: noDelay };
+      }
+      return after >= cat.left * 0.4
+        ? { tone: 'good', verdict: 'Go for it, it is in budget', detail: `You have ${money(cat.left)} left for ${name} this month, so ${money(after)} is still left after this.`, impacts: noDelay }
+        : { tone: 'tight', verdict: 'In budget, but it uses most of it', detail: `It fits the ${money(cat.left)} left for ${name}, leaving ${money(after)} for the other ${daysLeft} days of the month.`, impacts: noDelay };
+    }
+    const overCat = price - Math.max(0, cat.left);
+    if (price <= left) {
+      return {
+        tone: 'tight',
+        verdict: `Over your ${name} budget`,
+        detail: `${cat.left > 0 ? `Only ${money(cat.left)} is left for ${name}` : `Your ${name} budget is used up`}, so this goes ${money(overCat)} over it. Your other categories have room to cover it, but then they get less this month.`,
+        impacts: noDelay
+      };
+    }
+  }
   if (price <= left * 0.4) {
     return {
       tone: 'good',
@@ -56,9 +86,9 @@ export function affordCheck(price: number, left: number, goals: { name: string; 
     tone: 'over',
     verdict: 'Wait, or plan for it',
     detail: least
-      ? `This is ${money(over)} over your spending room, so it would come out of a goal. Least disruptive: ${least.name}, about ${least.weeks} weeks.`
+      ? `This is ${money(over)} over your spending room, so it would come out of a goal. Least disruptive: ${least.name}, about ${least.weeks} week${least.weeks === 1 ? '' : 's'}.`
       : `This is ${money(over)} over your spending room. Add a monthly contribution to a goal to see the delay.`,
-    impacts: rows.map((r) => ({ goal: `If it comes from ${r.name}`, impact: `+${r.weeks} weeks`, good: false }))
+    impacts: rows.map((r) => ({ goal: `If it comes from ${r.name}`, impact: `+${r.weeks} week${r.weeks === 1 ? '' : 's'}`, good: false }))
   };
 }
 
@@ -179,9 +209,20 @@ export interface GoalProgress { pct: number; steps: string }
 
 export function goalProgress(
   g: Goal,
-  ctx: { trips: Trip[]; books: Book[]; classes: FitnessClass[]; savings: SavingsGoal[]; readingGoal: number }
+  ctx: { trips: Trip[]; books: Book[]; classes: FitnessClass[]; savings: SavingsGoal[]; readingGoal: number; accounts?: Account[] }
 ): GoalProgress {
   if (g.achieved) return { pct: 100, steps: 'Achieved' };
+  if (g.link === 'networth') {
+    const target = g.target || 0;
+    const accounts = ctx.accounts ?? [];
+    if (!target) return { pct: 0, steps: 'Add a net worth target, edit this goal' };
+    if (!accounts.length) return { pct: 0, steps: `Add your accounts on the Money page to track ${money(target)}` };
+    const now = accounts.reduce((t, a) => t + a.balance, 0);
+    if (now >= target) return { pct: 100, steps: `${money(now)} of ${money(target)}, reached` };
+    const months = g.due ? monthsUntil(g.due) : 0;
+    const pace = months ? `, needs ${money((target - now) / months)} a month to get there` : '';
+    return { pct: pct(Math.max(0, now), target), steps: `${money(now)} of ${money(target)}${pace}` };
+  }
   if (g.link === 'books') {
     const read = readThisYear(ctx.books).length;
     return { pct: pct(read, ctx.readingGoal), steps: `${read} of ${ctx.readingGoal} read` };

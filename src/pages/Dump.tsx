@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, type ClipboardEvent } from 'react';
 import { db, uid, useMeta, useTable } from '../lib/db';
 import { hostOf, normalizeUrl, shortDate, titleFromUrl, todayISO } from '../lib/format';
 import { readThisYear } from '../lib/calc';
 import type { Book, DumpItem, DumpType, Shelf } from '../lib/types';
-import { Chips, EditButton, Sheet, StarText, Stars, useToast } from '../components/ui';
+import { Chips, EditButton, Sheet, StarText, Stars, resizeBlob, useToast } from '../components/ui';
 import { TableEditor, type FieldDef } from '../components/ListEditor';
 import { useFocusItem } from '../components/Search';
 import { IconTrash } from '../components/Icons';
@@ -11,6 +11,7 @@ import { previewWithCover } from '../lib/preview';
 import { bookshopSearch, lookupBook, type BookInfo } from '../lib/books';
 import { linkKind } from '../lib/links';
 import { LinkMedia } from '../components/LinkMedia';
+import { BookListPanel, isTikTokLink, useBookList } from '../components/BookListPanel';
 
 // YouTube links become Videos and Pinterest links become Pinterest, unless you chose otherwise.
 export function typeForLink(url: string, fallback: DumpType): DumpType {
@@ -206,17 +207,20 @@ export function Bookshelf({ focus }: { focus?: string }) {
   const [editing, setEditing] = useState<Book | null>(null);
   const [adding, setAdding] = useState(false);
   const [finding, setFinding] = useState<string | null>(null);
+  const list = useBookList(books);
   useFocusItem(focus, books.length > 0);
 
   const read = readThisYear(books).length;
   const shown = books.filter((b) => filter === 'All' || b.status === filter);
 
-  const find = async () => {
-    if (!lookup.trim()) { toast('Paste a link or type a title first'); return; }
+  const find = async (raw = lookup) => {
+    if (!raw.trim()) { toast('Type a title or paste a link first'); return; }
+    if (isTikTokLink(raw)) { void list.run({ url: /^https?:\/\//i.test(raw.trim()) ? raw.trim() : `https://${raw.trim()}` }); return; }
+    list.reset();
     setBusy(true);
-    const info = await lookupBook(lookup);
+    const info = await lookupBook(raw);
     setBusy(false);
-    if (!info) { toast('Could not find that one. Fill in the details by hand.'); setForm((f) => ({ ...f, title: f.title || (/^https?:/.test(lookup) ? '' : lookup) })); return; }
+    if (!info) { toast('Could not find that one. Fill in the details by hand.'); setForm((f) => ({ ...f, title: f.title || (/^https?:/.test(raw) ? '' : raw) })); return; }
     setForm((f) => ({ ...f, ...info, title: info.title, author: info.author || f.author }));
   };
 
@@ -228,6 +232,17 @@ export function Bookshelf({ focus }: { focus?: string }) {
     setLookup('');
     setAdding(false);
     toast('Added to your shelf');
+  };
+
+  const onPaste = async (e: ClipboardEvent<HTMLInputElement>) => {
+    const imgs = Array.from(e.clipboardData.files).filter((x) => x.type.startsWith('image/')).slice(0, 12);
+    if (imgs.length) {
+      e.preventDefault();
+      try { void list.run({ images: await Promise.all(imgs.map((x) => resizeBlob(x, 1400, 0.85))) }); } catch (err) { toast((err as Error).message); }
+      return;
+    }
+    const text = e.clipboardData.getData('text').trim();
+    if (isTikTokLink(text)) { e.preventDefault(); setLookup(text); void find(text); }
   };
 
   // For books added before covers existed: look up by title and author, keep your review and rating.
@@ -255,14 +270,16 @@ export function Bookshelf({ focus }: { focus?: string }) {
 
       <Sheet title="Add a book" open={adding} onClose={() => setAdding(false)}>
         <form className="stack-s" style={{ gap: 12 }} noValidate onSubmit={(e) => { e.preventDefault(); add(); }}>
-          <label htmlFor="blookup" className="lbl">Paste a link or type a title</label>
+          <label htmlFor="blookup" className="lbl">Search a title, or paste a link or TikTok</label>
           <div className="inline-add">
-            <input id="blookup" type="text" inputMode="url" autoCapitalize="off" className="field" value={lookup} onChange={(e) => setLookup(e.target.value)}
+            <input id="blookup" type="text" autoCapitalize="off" className="field" value={lookup} onChange={(e) => setLookup(e.target.value)}
+              onPaste={(e) => void onPaste(e)}
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void find(); } }}
-              placeholder="Bookshop, Amazon, Goodreads link, or a title" />
-            <button type="button" className="btn2" onClick={() => void find()} disabled={busy}>{busy ? 'Looking' : 'Look it up'}</button>
+              placeholder="Title, Bookshop or Amazon link, or a TikTok" />
+            <button type="button" className="btn2" onClick={() => void find()} disabled={busy || !!list.busy}>{busy || list.busy ? 'Looking' : 'Look it up'}</button>
           </div>
-          {(form.cover || form.tldr || form.price) && (
+          <BookListPanel list={list} shelf={books} onAdded={(n) => { setAdding(false); setLookup(''); toast(`${n} book${n === 1 ? '' : 's'} added to Want to read`); }} />
+          {!list.active && (form.cover || form.tldr || form.price) && (
             <div className="book-found">
               {form.cover && <img src={form.cover} alt="" />}
               <div className="stack-s" style={{ gap: 4, minWidth: 0 }}>
@@ -273,6 +290,7 @@ export function Bookshelf({ focus }: { focus?: string }) {
               </div>
             </div>
           )}
+          {!list.active && <>
           <label htmlFor="btitle" className="lbl">Title</label>
           <input id="btitle" type="text" className="field" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Title" />
           <label htmlFor="bauthor" className="lbl">Author</label>
@@ -288,13 +306,14 @@ export function Bookshelf({ focus }: { focus?: string }) {
           <label htmlFor="breview" className="lbl">My review (optional)</label>
           <textarea id="breview" rows={3} className="area" value={form.review} onChange={(e) => setForm({ ...form, review: e.target.value })} placeholder="A few lines: what stuck with you, who should read it" />
           <button type="submit" className="btn">Add to shelf</button>
+          </>}
         </form>
       </Sheet>
 
       <section aria-labelledby="shelf-h" className="stack" style={{ gap: 14 }}>
         <div className="trend-head">
           <h2 className="h2" id="shelf-h">Bookshelf</h2>
-          <button type="button" className="btn" onClick={() => { setForm(empty); setLookup(''); setAdding(true); }}>+ Add a book</button>
+          <button type="button" className="btn" onClick={() => { setForm(empty); setLookup(''); list.reset(); setAdding(true); }}>+ Add a book</button>
         </div>
         <Chips label="Filter by shelf" value={filter} onChange={setFilter} options={[{ value: 'All', label: `All (${books.length})` }, { value: 'Read', label: 'Read' }, { value: 'Reading', label: 'Reading' }, { value: 'Want to read', label: 'Want to read' }]} />
         {shown.length === 0 && <p className="empty">No books on this shelf yet.</p>}

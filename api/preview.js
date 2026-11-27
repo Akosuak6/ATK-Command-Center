@@ -23,21 +23,24 @@ function meta(html, keys) {
   return '';
 }
 
-// YouTube and Pinterest publish official oEmbed endpoints; they are more reliable than their pages.
+// YouTube, Pinterest and TikTok publish official oEmbed endpoints; they are more reliable than their pages.
 function oembedFor(u) {
   const h = u.hostname.replace(/^(www|m|music)\./, '');
   if (h === 'youtu.be' || h === 'youtube.com') return { site: 'YouTube', api: `https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(u.href)}` };
   if (h === 'pin.it' || /(^|\.)pinterest\.[a-z.]+$/.test(h)) return { site: 'Pinterest', api: `https://www.pinterest.com/oembed.json?url=${encodeURIComponent(u.href)}` };
+  if (/(^|\.)tiktok\.com$/.test(h)) return { site: 'TikTok', api: `https://www.tiktok.com/oembed?url=${encodeURIComponent(u.href)}` };
   return null;
 }
+// Share links that only redirect: oEmbed wants the full address they lead to.
+const isShortLink = (u) => u.hostname === 'pin.it' || /^(vm|vt)\.tiktok\.com$/.test(u.hostname) || /^www\.tiktok\.com$/.test(u.hostname) && u.pathname.startsWith('/t/');
 
 async function tryOembed(u) {
   const o = oembedFor(u);
   if (!o) return null;
   try {
     let target = u;
-    if (u.hostname === 'pin.it') {
-      // Short links need resolving first; Pinterest's oEmbed wants the full pin address.
+    if (isShortLink(u)) {
+      // Short links need resolving first; the oEmbed endpoints want the full address.
       const r = await fetchWithTimeout(u.href, { headers: { 'user-agent': UA }, redirect: 'follow' });
       target = new URL(r.url);
       r.body?.cancel?.().catch?.(() => {});

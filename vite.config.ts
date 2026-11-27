@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv, type Plugin, type ViteDevServer } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import { existsSync, readFileSync } from 'node:fs';
@@ -10,6 +10,17 @@ function seedPlugin() {
   return {
     name: 'command-center-seed',
     resolveId: (source: string) => (source === id ? '\0' + id : null),
+    // Editing the overlay during `npm run dev` reloads the page with the new seed.
+    configureServer(server: ViteDevServer) {
+      const overlayPath = process.env.SEED_OVERLAY || 'private/seed-overlay.json';
+      server.watcher.add(overlayPath);
+      server.watcher.on('change', (file) => {
+        if (!file.replace(/\\/g, '/').endsWith(overlayPath.replace(/\\/g, '/'))) return;
+        const mod = server.moduleGraph.getModuleById('\0' + id);
+        if (mod) server.moduleGraph.invalidateModule(mod);
+        server.ws.send({ type: 'full-reload' });
+      });
+    },
     load(resolved: string) {
       if (resolved !== '\0' + id) return null;
       const base = JSON.parse(readFileSync('src/data/seed.json', 'utf8'));
@@ -26,9 +37,40 @@ function seedPlugin() {
   };
 }
 
+// Runs the functions in api/ during `npm run dev`, the way Vercel runs them once deployed.
+function apiPlugin(): Plugin {
+  return {
+    name: 'command-center-api',
+    apply: 'serve',
+    configureServer(server) {
+      // Keys kept in .env.local (never committed) reach the api functions, as they would on a host.
+      const env = loadEnv('development', process.cwd(), '');
+      if (env.ANTHROPIC_API_KEY && !process.env.ANTHROPIC_API_KEY) process.env.ANTHROPIC_API_KEY = env.ANTHROPIC_API_KEY;
+      server.middlewares.use(async (req, res, next) => {
+        const url = new URL(req.url ?? '/', 'http://localhost');
+        const m = /^\/api\/([a-z]+)$/.exec(url.pathname);
+        if (!m || !existsSync(`api/${m[1]}.js`)) return next();
+        try {
+          const mod = await server.ssrLoadModule(`/api/${m[1]}.js`);
+          const r = res as typeof res & Record<string, unknown>;
+          r.status = (code: number) => { res.statusCode = code; return r; };
+          r.json = (body: unknown) => { res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(body)); return r; };
+          r.send = (body: unknown) => { res.end(body as string | Buffer); return r; };
+          (req as typeof req & { query: Record<string, string> }).query = Object.fromEntries(url.searchParams);
+          await mod.default(req, r);
+        } catch (e) {
+          server.config.logger.error(`api/${m[1]}: ${(e as Error).message}`);
+          if (!res.headersSent) { res.statusCode = 500; res.end('function failed'); }
+        }
+      });
+    }
+  };
+}
+
 export default defineConfig({
   plugins: [
     seedPlugin(),
+    apiPlugin(),
     react(),
     VitePWA({
       registerType: 'autoUpdate',
@@ -41,7 +83,7 @@ export default defineConfig({
         scope: '/',
         display: 'standalone',
         orientation: 'portrait',
-        background_color: '#D8CFC1',
+        background_color: '#070B14',
         theme_color: '#0F1A2E',
         icons: [
           { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },

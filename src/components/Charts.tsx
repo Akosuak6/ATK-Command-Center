@@ -1,9 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent } from 'react';
 import { money, monthsUntil } from '../lib/format';
 
-// Categorical order is fixed; validated against the linen card (#F3EEE6).
-export const SERIES = ['#3A5A9E', '#B5702F', '#7E4A86'];
-export const SERIES_OTHER = '#8A8478';
+// Categorical order is fixed. Light values were validated against the linen card (#F3EEE6);
+// the Moody theme swaps in lighter tints through the --series-* variables in styles.css.
+export const SERIES = ['var(--series-1)', 'var(--series-2)', 'var(--series-3)'];
+export const SERIES_OTHER = 'var(--series-other)';
 
 function useWidth<T extends HTMLElement>(fallback = 320) {
   const ref = useRef<T>(null);

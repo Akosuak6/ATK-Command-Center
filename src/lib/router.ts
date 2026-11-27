@@ -15,7 +15,7 @@ export const SECTIONS: SectionDef[] = [
   { id: 'home', label: 'Home', banner: 'HOME', sub: 'your day at a glance', subs: [['today', 'Today'], ['goals', 'Goals and life areas']], trends: true },
   { id: 'dump', label: 'Dump', banner: 'DUMP', sub: 'learnings, think pieces, films and books', subs: [['all', 'Everything'], ['books', 'Bookshelf']], trends: true },
   { id: 'money', label: 'Money', banner: 'MONEY', sub: 'budget, goals and every purchase', subs: [['overview', 'Overview'], ['budget', 'Monthly budget'], ['goals', 'Long term goals'], ['trips', 'Trip planner']], trends: true },
-  { id: 'health', label: 'Health', banner: 'HEALTH', sub: 'body, classes and routines', subs: [['today', 'Today'], ['classes', 'Classes'], ['routines', 'Routines']], trends: true },
+  { id: 'health', label: 'Health', banner: 'HEALTH', sub: 'body, classes and routines', subs: [['classes', 'Classes'], ['workouts', 'Workouts'], ['routines', 'Routines']], trends: true },
   { id: 'social', label: 'Social', banner: 'SOCIAL', sub: 'people, places and plans', subs: [['board', 'Vision board'], ['people', 'People and plans']], trends: true },
   { id: 'work', label: 'Work', banner: 'WORK', sub: 'opens when you start', subs: [['soon', 'Coming soon']], trends: false },
   { id: 'settings', label: 'Settings', banner: 'SETTINGS', sub: 'backups and this phone', subs: [['backup', 'Backups']], trends: false }
