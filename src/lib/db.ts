@@ -5,7 +5,7 @@ import { addDays, todayISO } from './format';
 import type {
   Account, Bill, Book, Studio, Transaction, BudgetCategory, CalendarEvent, DumpItem, FitnessClass, Goal, Habit, HealthDay,
   Meta, Person, Pin, Priority, Restaurant, RoadmapItem, SavingsGoal, ShowEvent, SkincareStep, Supplement,
-  Trim, Trip, WishItem, DaySnapshot
+  Trim, Trip, WishItem, DaySnapshot, PeriodGoal, BucketItem, Contact, CareItem
 } from './types';
 
 export class CommandCenterDB extends Dexie {
@@ -35,6 +35,10 @@ export class CommandCenterDB extends Dexie {
   studios!: Table<Studio, string>;
   transactions!: Table<Transaction, string>;
   history!: Table<DaySnapshot, string>;
+  periodGoals!: Table<PeriodGoal, string>;
+  bucket!: Table<BucketItem, string>;
+  contacts!: Table<Contact, string>;
+  care!: Table<CareItem, string>;
 
   constructor() {
     super('akosua-command-center');
@@ -92,6 +96,12 @@ export class CommandCenterDB extends Dexie {
     // Version 10: replace the untouched sample accounts with the seed ones.
     // Version 11: one saved row per day of the numbers that only exist as today's value (see history.ts).
     this.version(11).stores({ history: 'date' });
+    // Version 12: goals for a week, month, quarter or year on Home, and the bucket list.
+    this.version(12).stores({ periodGoals: 'id, period', bucket: 'id, category' });
+    // Version 13: work contacts.
+    this.version(13).stores({ contacts: 'id, lastContact' });
+    // Version 14: doctor reminders.
+    this.version(14).stores({ care: 'id, order' });
     this.version(10).stores({}).upgrade(async (tx) => {
       const rows = (seed as { accounts?: { id: string }[] }).accounts ?? [];
       const current = (await tx.table('accounts').toArray()) as { id: string }[];
