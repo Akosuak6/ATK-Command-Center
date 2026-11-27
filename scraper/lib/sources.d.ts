@@ -1,6 +1,6 @@
 // Types for sources.js, used by the app.
 import type { FeedDomain } from './topics';
-export type SourceGroup = 'health' | 'fashion' | 'search' | 'linkedin' | 'custom';
+export type SourceGroup = 'health' | 'fashion' | 'search' | 'keywords' | 'linkedin' | 'custom';
 export interface SourceDef {
   id: string;
   name: string;
@@ -14,6 +14,7 @@ export interface SourceDef {
   kind?: 'news' | 'newsletter' | 'search' | 'linkedin';
   broad?: boolean;
   weight?: number;
+  keyword?: string; // set on a keyword's own search
 }
 export const GROUP_LABELS: Record<SourceGroup, string>;
 export const SOURCES: SourceDef[];

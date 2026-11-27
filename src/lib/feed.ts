@@ -3,10 +3,11 @@ import { db, getMeta, setMeta } from './db';
 import { hostOf, normalizeUrl, shortDate, titleFromUrl } from './format';
 import { coverFromImageUrl, fetchPreview } from './preview';
 import { addDumpItem } from '../pages/Dump';
-import { classify, TOPIC_BY_ID, TOPICS } from '../../api/_feed/topics.js';
+import { classify, TOPIC_BY_ID, TOPICS } from '../../scraper/lib/topics.js';
+import { compileKeywords, matchKeywords, normalizeKeywords } from '../../scraper/lib/keywords.js';
 import type { DumpType, FeedItem, FeedSettings, FeedSourceStatus } from './types';
 
-export const DEFAULT_FEED_SETTINGS: FeedSettings = { skip: [], custom: [], mutedTopics: [] };
+export const DEFAULT_FEED_SETTINGS: FeedSettings = { skip: [], custom: [], mutedTopics: [], keywords: [] };
 export const STALE_AFTER_MS = 2 * 3600 * 1000; // refresh on open when older than this
 const KEEP_DAYS = 30;
 const MAX_ITEMS = 800;
@@ -36,6 +37,8 @@ async function getJson<T>(path: string, timeoutMs: number): Promise<T | null> {
 
 export function feedQuery(settings: FeedSettings, fresh = false) {
   const params = new URLSearchParams();
+  const keywords = normalizeKeywords(settings.keywords ?? []);
+  if (keywords.length) params.set('kw', keywords.join('|'));
   if (settings.skip.length) params.set('skip', [...settings.skip].sort().join(','));
   if (settings.custom.length) {
     params.set('extra', base64url(JSON.stringify(settings.custom.map((c) => ({ i: c.id, n: c.name, u: c.url, q: c.query, d: c.domain, k: c.keep, t: c.topics })))));
@@ -78,6 +81,7 @@ async function mergeItems(incoming: Incoming[]) {
       ...it,
       image: it.image || ex?.image || undefined,
       topics: ex?.manual ? [...new Set([...ex.topics, ...it.topics])] : it.topics,
+      keywords: [...new Set([...(it.keywords ?? []), ...(ex?.keywords ?? [])])],
       firstSeen: ex?.firstSeen ?? now,
       saved: ex?.saved,
       hidden: ex?.hidden,
@@ -114,6 +118,39 @@ export function rankFeed(items: FeedItem[], now = Date.now()) {
     perSource.set(x.i.source, n + 1);
   }
   return scored.sort((a, b) => b.s - a.s).map((x) => x.i);
+}
+
+// Your keywords, stored with the feed settings.
+export async function setKeywords(next: string[]) {
+  const settings = await getMeta<FeedSettings>('feedSettings', DEFAULT_FEED_SETTINGS);
+  const keywords = normalizeKeywords(next);
+  await setMeta('feedSettings', { ...settings, keywords });
+  await retagKeywords(keywords);
+  return keywords;
+}
+
+// Tag the stories already on the phone with a new keyword at once, before the next refresh brings more.
+// Tags a keyword's own search added stay while the keyword does.
+export async function retagKeywords(keywords: string[]) {
+  const compiled = compileKeywords(keywords);
+  const current = new Set(keywords.map((k) => k.toLowerCase()));
+  const all = await db.feed.toArray();
+  const changed: FeedItem[] = [];
+  for (const i of all) {
+    const kept = (i.keywords ?? []).filter((k) => current.has(k.toLowerCase()));
+    const found = matchKeywords(`${i.title} . ${i.summary} . ${i.author ?? ''}`, compiled);
+    const next = [...new Set([...kept, ...found])];
+    const before = i.keywords ?? [];
+    if (next.length !== before.length || next.some((k, n) => k !== before[n])) changed.push({ ...i, keywords: next });
+  }
+  if (changed.length) await db.feed.bulkPut(changed);
+}
+
+// The keywords of a story that you still follow.
+export function liveKeywords(item: FeedItem, keywords: string[]) {
+  if (!item.keywords?.length || !keywords.length) return [];
+  const byLower = new Map(keywords.map((k) => [k.toLowerCase(), k]));
+  return [...new Set(item.keywords.map((k) => byLower.get(k.toLowerCase())).filter((k): k is string => Boolean(k)))];
 }
 
 export function topicLabel(id: string) {
@@ -219,6 +256,8 @@ export async function addPasted(raw: string, topic?: string): Promise<{ item: Fe
   if (!title) title = titleFromUrl(url);
   if (summary && summary.slice(0, 60) === title.slice(0, 60)) summary = '';
   const topics = topic ? [topic] : classify(`${title} . ${summary}`, '');
+  const settings = await getMeta<FeedSettings>('feedSettings', DEFAULT_FEED_SETTINGS);
+  const keywords = matchKeywords(`${title} . ${summary} . ${author}`, compileKeywords(settings.keywords ?? []));
   const now = new Date().toISOString();
   const item: FeedItem = {
     id,
@@ -232,6 +271,7 @@ export async function addPasted(raw: string, topic?: string): Promise<{ item: Fe
     image: p?.image || undefined,
     author,
     topics,
+    keywords,
     rel: 1.3,
     kind: linkedIn ? 'linkedin' : 'article',
     firstSeen: now,

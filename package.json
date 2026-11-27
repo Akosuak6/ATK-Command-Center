@@ -9,8 +9,8 @@
     "preview": "vite preview --host",
     "typecheck": "tsc -b",
     "icons": "node scripts/make-icons.mjs",
-    "feed": "node scripts/feed.mjs",
-    "test": "node --test scripts/feed.test.mjs"
+    "feed": "node scraper/feed.mjs",
+    "test": "node --test scraper/feed.test.mjs"
   },
   "dependencies": {
     "dexie": "^4.4.7",

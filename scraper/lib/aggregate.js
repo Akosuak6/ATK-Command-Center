@@ -1,7 +1,10 @@
-// Fetch every source, read its stories, tag them with topics, drop repeats and rank what is left.
+// Fetch every source, read its stories, tag them with topics and your keywords, drop repeats and rank what is left.
+// Plain web requests from whatever machine runs this (your laptop, or the app's own server). No AI service
+// fetches anything, so blocks aimed at AI crawlers do not apply; sites see an ordinary feed reader.
 import { parseFeed, feedLinksIn } from './parse.js';
 import { classify, isNoise, TOPIC_BY_ID } from './topics.js';
 import { sourceUrl, googleNewsUrl } from './sources.js';
+import { compileKeywords, keywordQuery, matchKeywords } from './keywords.js';
 
 const UA = 'Mozilla/5.0 (compatible; CommandCenterFeed/1.0; personal RSS reader)';
 const ACCEPT = 'application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.9, text/html;q=0.5, */*;q=0.3';
@@ -104,11 +107,15 @@ async function collect(src, opts) {
       if (src.broad && isNoise(title)) continue;
       const text = [title, summary, raw.categories.join(' ')].join(' . ');
       const matched = classify(text, src.domain);
-      if (src.keep === 'match' && matched.length === 0) continue;
+      // Your keywords count anywhere they appear, and on every story a keyword's own search found
+      // (Google reads the whole article, so the headline may not say it).
+      const keywords = matchKeywords(text, opts.compiledKeywords);
+      if (src.keyword && !keywords.includes(src.keyword)) keywords.unshift(src.keyword);
+      if (src.keep === 'match' && matched.length === 0 && keywords.length === 0) continue;
       const topics = matched.length ? matched : (src.topics ?? []);
-      if (topics.length === 0) continue;
+      if (topics.length === 0 && keywords.length === 0) continue;
       const crosses = topics.filter((t) => TOPIC_BY_ID[t]?.cross).length;
-      const rel = (src.weight ?? 1) * (1 + 0.2 * Math.min(3, Math.max(0, matched.length - 1)) + (crosses ? 0.2 : 0));
+      const rel = (src.weight ?? 1) * (1 + 0.2 * Math.min(3, Math.max(0, matched.length - 1)) + (crosses ? 0.2 : 0)) * (keywords.length ? 1.25 : 1);
       const site = raw.sourceUrl ? hostOf(raw.sourceUrl) : hostOf(raw.url);
       const kind = /linkedin\.com/.test(site) || src.kind === 'linkedin' ? 'linkedin' : src.kind === 'newsletter' || /substack\.com|beehiiv\.com/.test(site) ? 'newsletter' : 'article';
       out.push({
@@ -123,6 +130,7 @@ async function collect(src, opts) {
         image: raw.image || '',
         author: raw.author || '',
         topics,
+        keywords,
         rel: Math.round(rel * 1000) / 1000,
         kind
       });
@@ -160,6 +168,7 @@ function dedupe(items) {
       image: keep.image || other.image,
       author: keep.author || other.author,
       topics: [...new Set([...hit.topics, ...it.topics])],
+      keywords: [...new Set([...(hit.keywords ?? []), ...(it.keywords ?? [])])],
       rel: Math.max(hit.rel, it.rel),
       also: [...new Set([...hit.also, other.source])].filter((s) => s !== keep.source)
     };
@@ -177,8 +186,29 @@ export function score(item, now = Date.now()) {
   return item.rel * Math.pow(0.5, hours / 30);
 }
 
-// aggregate({ sources }) -> { fetchedAt, items, sources: [status] }
-export async function aggregate({ sources, limit = 450, concurrency = 12, ...opts }) {
+// One Google News search per keyword.
+export function keywordSources(keywords) {
+  return compileKeywords(keywords).map(({ keyword }) => ({
+    id: `kw-${hashId(keyword.toLowerCase())}`,
+    name: keyword,
+    google: keywordQuery(keyword),
+    days: 14,
+    domain: '',
+    keep: 'all',
+    topics: [],
+    group: 'keywords',
+    kind: 'search',
+    keyword,
+    weight: 1
+  }));
+}
+
+// aggregate({ sources, keywords }) -> { fetchedAt, items, sources: [status], keywords }
+export async function aggregate({ sources: given, keywords: rawKeywords = [], limit = 450, concurrency = 12, ...opts }) {
+  const compiledKeywords = compileKeywords(rawKeywords);
+  const keywords = compiledKeywords.map((k) => k.keyword);
+  const sources = [...given, ...keywordSources(keywords)];
+  opts = { ...opts, compiledKeywords };
   const results = [];
   let next = 0;
   const worker = async () => {
@@ -191,7 +221,7 @@ export async function aggregate({ sources, limit = 450, concurrency = 12, ...opt
   const items = dedupe(results.flatMap((r) => r.items));
   const now = opts.now ?? Date.now();
   items.sort((a, b) => score(b, now) - score(a, now));
-  return { fetchedAt: new Date(now).toISOString(), items: items.slice(0, limit), sources: results.map((r) => r.status) };
+  return { fetchedAt: new Date(now).toISOString(), items: items.slice(0, limit), sources: results.map((r) => r.status), keywords };
 }
 
 // Custom sources from the app arrive as a compact list. Validate them before fetching anything.

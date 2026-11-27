@@ -12,6 +12,7 @@ export const GROUP_LABELS = {
   health: 'Healthcare news',
   fashion: 'Fashion and retail',
   search: 'Topic searches (Google News)',
+  keywords: 'Your keywords (Google News)',
   linkedin: 'LinkedIn articles (via Google News)',
   custom: 'Added by you'
 };

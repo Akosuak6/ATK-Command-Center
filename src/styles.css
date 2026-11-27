@@ -524,3 +524,10 @@ dialog.sheet[open] { display: flex; flex-direction: column; overflow: hidden; }
 .feed-src-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .feed-src > .sub { text-align: right; max-width: 45%; }
 .feed-src.bad > .sub { color: var(--rust); }
+.t-kw { background: var(--navy); color: #FFFFFF; }
+.kw-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.kw-chip { display: inline-flex; align-items: center; min-height: 44px; border-radius: 999px; background: var(--navy); color: #FFFFFF; }
+.kw-name { min-height: 44px; padding: 0 4px 0 14px; border: none; background: transparent; color: inherit; font-size: 13px; cursor: pointer; }
+.kw-remove { width: 40px; height: 44px; border: none; background: transparent; color: var(--cream-2); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; border-radius: 0 999px 999px 0; }
+.kw-remove:hover { color: #FFFFFF; }
+.kw-remove svg { width: 16px; height: 16px; }

@@ -34,22 +34,24 @@ Netlify works the same way (build `npm run build`, publish `dist`).
 
 ## Feed
 
-Dump, Feed pulls this week's stories on healthcare (digital health, femtech, women's health, mental health, Medicaid, Medicare, health services, healthcare with AI and with consumers) and fashion (trend forecasting, fashion with technology, AI and consumers).
+Dump, Feed pulls this week's stories on your own keywords, healthcare (digital health, femtech, women's health, mental health, Medicaid, Medicare, health services, healthcare with AI and with consumers) and fashion (trend forecasting, fashion with technology, AI and consumers).
 
-- `api/feed.js` reads about 40 public RSS feeds and Google News searches, tags each story with topics, drops repeats, shopping lists and horoscopes, and ranks the rest by recency and fit. The sources are in `api/_feed/sources.js` and the topic keywords in `api/_feed/topics.js`.
+- The scraper is its own program in `scraper/` (see `scraper/README.md`). It has no dependencies and no AI in it, so sites that block AI crawlers still answer. It runs on your laptop, and `api/feed.js` runs the same code on the app's server when the phone refreshes.
+- It reads about 40 public RSS feeds and Google News searches, tags each story with topics and your keywords, drops repeats, shopping lists and horoscopes, and ranks the rest by recency and fit. The sources are in `scraper/lib/sources.js` and the topic words in `scraper/lib/topics.js`.
+- Your keywords: type them in the box at the top of the feed. Each one is matched against every story from every source and gets its own news search. Tap a keyword to see only its stories.
 - WGSN, The Business of Fashion and Vogue Business have no open feeds, so they come in through Google News searches.
 - LinkedIn has no feeds and its terms forbid scraping, so the app never logs in to it. Paste a post into the box at the top of the feed and it is tagged and kept. Two Google News searches also pick up public LinkedIn articles that Google has indexed.
 - Sources and topics (on the feed) turns topics and sources on or off, shows which sources answered on the last refresh, and adds your own: any Substack, newsletter or site with a feed (Find feed locates it), or any Google News search.
 - Save to Dump copies a story into Everything with its cover.
 
-The same reader runs from the command line:
+The same scraper runs on its own from the command line:
 
 ```bash
-npm run feed                         # top stories for every topic
-npm run feed -- --check              # which sources answered, and how many stories each gave
-npm run feed -- --topic femtech --limit 10
-npm run feed -- --md digest.md       # save a Markdown digest
-npm test                             # reader, tagging and ranking tests
+npm run feed                                   # top stories for every topic
+npm run feed -- --keywords "quiet luxury, Oura"  # your keywords first
+npm run feed -- --html feed.html --every 60    # a page for any browser, refreshed hourly
+npm run feed -- --check                        # which sources answered
+npm test                                       # reader, tagging, keyword and ranking tests
 ```
 
 `npm run dev` and `npm run preview` serve the functions in `api/` too, so the feed and link previews work on the laptop before deploying.
@@ -66,7 +68,7 @@ Data lives only on the phone, so use Settings, Export backup about once a month.
 - `src/pages/*` one file per section
 - `src/components/ListEditor.tsx` the edit sheet used by every editable list
 - `scripts/make-icons.mjs` renders the home screen icons and iPhone splash screens
-- `api/_feed/` the feed reader (RSS and Atom parsing, topics, sources, ranking), shared by `api/feed.js`, `scripts/feed.mjs` and the app
+- `scraper/` the feed scraper, a standalone program (RSS and Atom parsing, topics, keywords, sources, ranking), also used by `api/feed.js` and the app
 - `src/lib/feed.ts` and `src/pages/Feed.tsx` the feed on the phone
 
 ## Phases

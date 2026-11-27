@@ -1,11 +1,12 @@
-// GET /api/feed                     -> { fetchedAt, items, sources }
-//   ?skip=id,id                      built-in sources to leave out
+// GET /api/feed                     -> { fetchedAt, items, sources, keywords }
+//   ?kw=quiet luxury|Oura            your keywords, separated by |
+//   &skip=id,id                      built-in sources to leave out
 //   &extra=<base64url JSON>          your own sources: [{ n: name, u: feed url | q: Google News search, d: domain, k: 'all'|'match', t: topics }]
 // GET /api/feed?discover=<page url> -> { url, title, items } or { error }
-// Reads public RSS feeds and Google News searches, tags stories with topics, and ranks them.
+// A thin wrapper around the scraper in scraper/, which also runs on its own from the command line.
 import { safeUrl } from './_safe.js';
-import { SOURCES } from './_feed/sources.js';
-import { aggregate, customSources, discoverFeed } from './_feed/aggregate.js';
+import { SOURCES } from '../scraper/lib/sources.js';
+import { aggregate, customSources, discoverFeed } from '../scraper/lib/aggregate.js';
 
 function decodeExtra(raw) {
   if (!raw) return [];
@@ -32,7 +33,8 @@ export default async function handler(req, res) {
   const skip = new Set(String(q.skip || '').split(',').map((s) => s.trim()).filter(Boolean));
   const sources = [...SOURCES.filter((s) => !skip.has(s.id)), ...customSources(decodeExtra(q.extra), safeUrl)];
   // Every source at once, each with its own time limit, so one slow site cannot hold up the rest.
-  const out = await aggregate({ sources, timeoutMs: 7000, concurrency: sources.length });
+  const keywords = String(q.kw || '').split('|');
+  const out = await aggregate({ sources, keywords, timeoutMs: 7000, concurrency: sources.length + 30 });
   // Shared caches can keep the result for 20 minutes, so a quick reload costs nothing.
   res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=1200, stale-while-revalidate=3600');
   return res.status(200).json(out);

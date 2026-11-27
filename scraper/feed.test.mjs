@@ -1,11 +1,12 @@
 // Tests for the feed reader, topic tagging and ranking. Run with: npm test
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseFeed, feedLinksIn, toText } from '../api/_feed/parse.js';
-import { classify, isNoise } from '../api/_feed/topics.js';
-import { aggregate, canonicalUrl, customSources, discoverFeed, hashId } from '../api/_feed/aggregate.js';
-import { SOURCES, sourceUrl } from '../api/_feed/sources.js';
-import { safeUrl } from '../api/_safe.js';
+import { parseFeed, feedLinksIn, toText } from './lib/parse.js';
+import { classify, isNoise } from './lib/topics.js';
+import { aggregate, canonicalUrl, customSources, discoverFeed, hashId, keywordSources } from './lib/aggregate.js';
+import { SOURCES, sourceUrl } from './lib/sources.js';
+import { compileKeywords, keywordQuery, matchKeywords, parseKeywordInput } from './lib/keywords.js';
+import { safeUrl } from './lib/safe.js';
 
 const NOW = Date.parse('2026-11-27T15:00:00Z');
 
@@ -194,4 +195,41 @@ test('every built-in source has a unique id and an address', () => {
 
 test('text helper strips markup', () => {
   assert.equal(toText('<p>Hello&nbsp;<b>there</b></p><script>x()</script>'), 'Hello there');
+});
+
+test('keywords are parsed, matched as phrases and searched', () => {
+  assert.deepEqual(parseKeywordInput('quiet luxury, Oura;  menopause\nOURA, '), ['quiet luxury', 'Oura', 'menopause']);
+  const kw = compileKeywords(['quiet luxury', 'virtual try-on', 'GLP-1', "women's health", 'Oura']);
+  assert.deepEqual(matchKeywords('Is quiet-luxury over? Virtual try ons are everywhere', kw), ['quiet luxury', 'virtual try-on']);
+  assert.deepEqual(matchKeywords('GLP 1 drugs and the sizing problem', kw), ['GLP-1']);
+  assert.deepEqual(matchKeywords('Women’s health funding hits a record', kw), ["women's health"]);
+  assert.deepEqual(matchKeywords('Bravoura and luxury quiet times', kw), [], 'whole words only, in order');
+  assert.equal(keywordQuery('quiet luxury'), '"quiet luxury"');
+  assert.equal(keywordQuery('Oura'), 'Oura');
+  assert.equal(keywordQuery('menopause OR perimenopause'), 'menopause OR perimenopause');
+  const [src] = keywordSources(['quiet luxury']);
+  assert.equal(src.keyword, 'quiet luxury');
+  assert.match(sourceUrl(src), /%22quiet%20luxury%22/);
+});
+
+test('keyword stories are kept, tagged and ranked up', async () => {
+  const sources = [{ id: 'vogue', name: 'Vogue', url: 'https://v.test/feed', domain: 'fashion', keep: 'match', broad: true, weight: 1 }];
+  const [kwSource] = keywordSources(['Zendaya']);
+  const out = await aggregate({
+    sources,
+    keywords: ['Zendaya', 'resale'],
+    now: NOW,
+    fetchImpl: fakeFetch({ 'https://v.test/feed': VOGUE, [sourceUrl(kwSource)]: GOOGLE })
+  });
+  const zendaya = out.items.find((i) => /Zendaya/.test(i.title));
+  assert.ok(zendaya, 'a keyword keeps a story that matches no topic');
+  assert.deepEqual(zendaya.keywords, ['Zendaya']);
+  assert.deepEqual(zendaya.topics, []);
+  const resale = out.items.find((i) => /Resale/.test(i.title));
+  assert.deepEqual(resale.keywords, ['resale']);
+  assert.ok(resale.topics.includes('fashion-consumer'));
+  const fromSearch = out.items.find((i) => i.title.startsWith('AI is rewriting'));
+  assert.ok(fromSearch.keywords.includes('Zendaya'), "stories from a keyword's own search carry the keyword");
+  assert.deepEqual(out.keywords, ['Zendaya', 'resale']);
+  assert.ok(out.sources.some((s) => s.id === kwSource.id && s.ok));
 });

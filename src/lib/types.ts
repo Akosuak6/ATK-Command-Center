@@ -240,6 +240,7 @@ export interface FeedItem {
   image?: string; // remote image address
   author?: string;
   topics: string[];
+  keywords?: string[]; // your keywords it matched
   rel: number; // how much it counts when ranking
   kind: FeedKind;
   also?: string[]; // other outlets that ran the same story
@@ -252,5 +253,5 @@ export interface FeedItem {
 
 // Your own feed sources and preferences. Stored in meta 'feedSettings'.
 export interface CustomFeedSource { id: string; name: string; url?: string; query?: string; domain: 'health' | 'fashion' | 'both' | ''; keep: 'all' | 'match'; topics: string[] }
-export interface FeedSettings { skip: string[]; custom: CustomFeedSource[]; mutedTopics: string[] }
+export interface FeedSettings { skip: string[]; custom: CustomFeedSource[]; mutedTopics: string[]; keywords?: string[] }
 export interface FeedSourceStatus { id: string; name: string; ok: boolean; found: number; kept: number; error: string }
