@@ -40,6 +40,16 @@ Without `DATABASE_URL`, `npm run dev` stores synced rows in PGlite (Postgres in 
 - In Neon every row of every store lives in one table, `cc_rows` (store, id, data as JSON, edit time, a running change number). When the same row was edited in two places, the most recent edit wins.
 - A new device shows "Downloading your data" until its first sync finishes.
 
+## Calendars
+
+Settings, Calendars links Google calendars by their secret iCal address (Google Calendar on a computer: Settings, the calendar under Settings for my calendars, Integrate calendar, Secret address in iCal format). Any number can be linked, and any iCal address works.
+
+- The address is a secret, so it is stored only in Neon (`cc_calendars`). It is never synced to devices and never sent back to the app; Settings only shows the label.
+- On open and when the app comes back to the front (at most every 15 minutes per device, and the server skips a calendar another device checked in that time), the device calls `/api/calendars/sync`. The server fetches each file, expands recurring events from 30 days back to 400 days ahead with ical.js, puts every time on a New York clock, and writes them into `cc_rows` as `calendar` rows. Devices then get them through the normal sync.
+- Event ids start with `ical-<calendar id>-`, so a resync replaces only that calendar's events (only changed rows are written, missing ones are deleted) and events added by hand stay. Unlinking a calendar removes its events everywhere.
+- `calendar` rows: `time` is `HH:MM` or `All day`, `end` is the last day of an event that spans days, `repeats` marks an occurrence of a recurring series.
+- To test locally, serve an `.ics` file from this computer (http and local addresses are allowed only by `npm run dev`; a deploy accepts https public addresses only).
+
 ## Your real data
 
 The repo is public, so real data never goes in `src/data/seed.json` (it only has placeholders). Your real tables are in `private/seed-overlay.json` (gitignored). `npm run make-import` merges the two into `private/import-backup.json` to import once, as above. After that, Neon holds everything.
@@ -52,6 +62,7 @@ The repo is public, so real data never goes in `src/data/seed.json` (it only has
 - `src/lib/db.ts` Dexie stores, backup export and import
 - `src/lib/sync.ts` the device side of sync; `src/server/store.ts` the Neon side
 - `src/server/handlers/*` link previews, image and logo copies, book lookup, TikTok book lists, Hevy; run through `src/server/adapter.ts`
+- `src/server/ics.ts` reads one calendar file into events; `src/server/calendars.ts` linked calendars and their sync; `src/lib/calendars.ts` the device side
 - `src/lib/router.ts` sections, subpages and hash routes (`#/money/trips/ethiopia-2027`), so moving around needs no server
 - `src/pages/*` one file per section (plain components; the empty root `pages/` folder keeps Next.js from treating them as routes)
 - `scripts/make-icons.mjs` renders the home screen icons and iPhone splash screens; `scripts/make-import.mjs` builds the import file

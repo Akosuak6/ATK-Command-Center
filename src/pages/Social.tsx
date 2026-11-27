@@ -12,6 +12,7 @@ import { useFocusItem } from '../components/Search';
 import { previewWithCover } from '../lib/preview';
 import { linkKind } from '../lib/links';
 import { LinkMedia } from '../components/LinkMedia';
+import { byTime, inDays } from '../lib/calendars';
 
 const pinLabel = (url?: string) => {
   const k = url ? linkKind(url).kind : 'other';
@@ -254,9 +255,11 @@ export function PeoplePlans() {
   const [edit, setEdit] = useState(false);
   const [name, setName] = useState('');
   const today = todayISO();
+  // Something that started before today and is still going (a weekend away) shows as today.
   const week = calendar
-    .filter((e) => e.area === 'Social' && e.date >= today && e.date <= addDays(today, 6))
-    .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+    .filter((e) => e.area === 'Social' && inDays(e, today, addDays(today, 6)))
+    .map((e) => ({ ...e, day: e.date < today ? today : e.date }))
+    .sort((a, b) => a.day.localeCompare(b.day) || byTime(a, b));
 
   const add = () => {
     if (!name.trim()) return;
@@ -270,7 +273,7 @@ export function PeoplePlans() {
         <div className="row"><h2 className="h2" id="week-h">Plans this week</h2><span className="sub">From your calendar</span></div>
         <div>
           {week.map((e) => (
-            <div className="line" key={e.id}><span>{e.date === today ? 'Today' : weekdayShort(e.date)} · {e.title}</span><span className="sub">{clock12(e.time)}</span></div>
+            <div className="line" key={e.id}><span>{e.day === today ? 'Today' : weekdayShort(e.day)} · {e.title}</span><span className="sub">{clock12(e.time)}</span></div>
           ))}
           {week.length === 0 && <p className="empty">No social plans on the calendar this week. Maybe time to make one.</p>}
         </div>

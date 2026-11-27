@@ -7,6 +7,7 @@ import { ToastProvider } from './components/ui';
 import { db } from './lib/db';
 import { startHistory } from './lib/history';
 import { isFirstSync, startSync } from './lib/sync';
+import { startCalendarSync } from './lib/calendars';
 
 let booted: Promise<void> | null = null;
 
@@ -23,6 +24,7 @@ function boot(): Promise<void> {
     }
     await startSync();
     startHistory(); // after the first download, so today's numbers come from real data
+    startCalendarSync(); // linked calendars: on open and on coming back, at most every 15 minutes
   })();
   return booted;
 }

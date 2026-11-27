@@ -10,6 +10,7 @@ import { TableEditor, type FieldDef } from '../components/ListEditor';
 import { DUMP_LABEL, DUMP_TAG } from './Dump';
 import { useLiveMoney } from './Money';
 import { useExportSpend } from '../lib/money';
+import { byTime, onDay } from '../lib/calendars';
 
 const DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
@@ -23,6 +24,7 @@ export function HomeToday() {
   const classes = useTable(db.classes);
   const books = useTable(db.books);
   const calendar = useTable(db.calendar, 'time');
+  const calendarSyncedAt = useMeta<string | null>('calendarSyncedAt', null);
   const priorities = useTable(db.priorities, 'date');
   const dump = useTable(db.dump, 'date', true);
   const [draft, setDraft] = useState('');
@@ -30,7 +32,7 @@ export function HomeToday() {
   const h = now.getHours();
   const trip = trips.find((t) => t.id === 'lisbon') ?? trips[0];
   const read = readThisYear(books).length;
-  const todays = calendar.filter((e) => e.date === today);
+  const todays = calendar.filter((e) => onDay(e, today)).sort(byTime);
   const nowHM = `${String(h).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   const upcoming = todays.filter((e) => e.time >= nowHM || !/^\d/.test(e.time));
 
@@ -100,7 +102,9 @@ export function HomeToday() {
         <section className="card" aria-labelledby="cal-h">
           <div className="row"><h2 className="h2" id="cal-h">Calendar</h2><span className="sub">Today</span></div>
           <div>
-            {todays.length === 0 && <p className="empty">No events for today yet. They arrive with the Morning sync.</p>}
+            {todays.length === 0 && (calendarSyncedAt
+              ? <p className="empty">Nothing on your calendars today.</p>
+              : <p className="empty">No events today. <a href={hrefFor('settings')}>Link your Google calendars in Settings</a> to bring them in.</p>)}
             {todays.map((e) => (
               <div className="line" key={e.id}>
                 <span className="cal-time">{clock12(e.time)}</span>

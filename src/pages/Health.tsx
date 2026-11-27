@@ -9,6 +9,7 @@ import { logoFromWebsite } from '../lib/preview';
 import { ListEditor, TableEditor, type FieldDef } from '../components/ListEditor';
 import { useFocusItem } from '../components/Search';
 import type { Workout } from '../lib/hevy';
+import { onDay } from '../lib/calendars';
 import { SCORES, classCost, classScore, creditValue, scoreText, studioScores, type ClassPassPlan, type GymMembership } from '../lib/ratings';
 
 interface Memberships { cpMonthly: number; cpCredits: number; cpSince: string; gymName: string; gymMonthly: number; stipend: number; pocketBudget: number }
@@ -18,7 +19,7 @@ export function HealthToday() {
   const calendar = useTable(db.calendar, 'time');
   const h = health[0] as HealthDay | undefined;
   const today = todayISO();
-  const call = todaysCall(h, calendar.filter((e) => e.date === today));
+  const call = todaysCall(h, calendar.filter((e) => onDay(e, today)));
 
   if (!h) {
     return (
