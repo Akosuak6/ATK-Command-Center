@@ -331,3 +331,32 @@ export interface CareItem {
   doneOn?: string;
   note?: string;
 }
+
+// A story in the feed (Dump, Feed). Pulled from public feeds by the scraper (scraper/, served at /api/feed),
+// or pasted by you. Pulled stories stay on each device (src/lib/feed.ts); pasted ones sync as feedPosts.
+export type FeedKind = 'article' | 'linkedin' | 'newsletter';
+export interface FeedItem {
+  id: string; // stable hash of the story's address
+  url: string;
+  title: string;
+  summary: string;
+  source: string; // publisher, e.g. Vogue
+  site: string; // publisher's host
+  sourceId: string; // the feed or search that found it, or 'pasted'
+  date: string; // ISO date and time published
+  image?: string; // remote image address
+  author?: string;
+  topics: string[];
+  keywords?: string[]; // your keywords it matched
+  rel: number; // how much it counts when ranking
+  kind: FeedKind;
+  also?: string[]; // other outlets that ran the same story
+  firstSeen: string; // when it first reached this device
+  read?: boolean;
+  manual?: boolean; // pasted by you
+}
+
+// Your feed keywords, sources and topic choices. Stored in meta 'feedSettings', so every device shares them.
+export interface CustomFeedSource { id: string; name: string; url?: string; query?: string; domain: 'health' | 'fashion' | 'both' | ''; keep: 'all' | 'match'; topics: string[] }
+export interface FeedSettings { skip: string[]; custom: CustomFeedSource[]; mutedTopics: string[]; keywords?: string[] }
+export interface FeedSourceStatus { id: string; name: string; ok: boolean; found: number; kept: number; error: string }

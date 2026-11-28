@@ -9,7 +9,9 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "icons": "node scripts/make-icons.mjs",
-    "make-import": "node scripts/make-import.mjs"
+    "make-import": "node scripts/make-import.mjs",
+    "feed": "node scraper/feed.mjs",
+    "test": "node --test scraper/feed.test.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.14.0",

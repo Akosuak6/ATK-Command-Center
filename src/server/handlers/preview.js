@@ -1,4 +1,4 @@
-// GET /api/preview?url=... -> { title, siteName, image }
+// GET /api/preview?url=... -> { title, siteName, image, description }
 // Reads a page's title and cover image (Open Graph or Twitter card tags).
 import { fetchWithTimeout, safeUrl } from './_safe.js';
 
@@ -15,10 +15,11 @@ function decode(s) {
 
 function meta(html, keys) {
   for (const key of keys) {
-    const re1 = new RegExp(`<meta[^>]+(?:property|name)=["']${key}["'][^>]*content=["']([^"']+)["']`, 'i');
-    const re2 = new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]*(?:property|name)=["']${key}["']`, 'i');
+    // A double quoted value may hold apostrophes (and the other way round), so match each kind separately.
+    const re1 = new RegExp(`<meta[^>]+(?:property|name)=["']${key}["'][^>]*content=(?:"([^"]+)"|'([^']+)')`, 'i');
+    const re2 = new RegExp(`<meta[^>]+content=(?:"([^"]+)"|'([^']+)')[^>]*(?:property|name)=["']${key}["']`, 'i');
     const m = re1.exec(html) || re2.exec(html);
-    if (m) return decode(m[1]);
+    if (m) return decode(m[1] ?? m[2]);
   }
   return '';
 }
@@ -86,12 +87,13 @@ export default async function handler(req, res) {
     reader.cancel().catch(() => {});
     const title = meta(html, ['og:title', 'twitter:title']) || decode((/<title[^>]*>([^<]*)<\/title>/i.exec(html) || [])[1] || '');
     const siteName = meta(html, ['og:site_name', 'application-name']);
+    const description = meta(html, ['og:description', 'twitter:description', 'description']).slice(0, 1000);
     let image = meta(html, ['og:image:secure_url', 'og:image', 'twitter:image', 'twitter:image:src']);
     if (image) {
       try { image = new URL(image, r.url).href; } catch { image = ''; }
     }
     res.setHeader('Cache-Control', 'public, max-age=86400');
-    return res.status(200).json({ title: title || embedded?.title || '', siteName: embedded?.siteName || siteName, image });
+    return res.status(200).json({ title: title || embedded?.title || '', siteName: embedded?.siteName || siteName, image, description });
   } catch {
     return res.status(502).json({ error: 'could not read that page' });
   }

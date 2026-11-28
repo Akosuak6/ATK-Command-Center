@@ -9,3 +9,5 @@ dist
 *.local
 .env*.local
 private/
+scraper/config.json
+feed.html

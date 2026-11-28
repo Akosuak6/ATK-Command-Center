@@ -10,6 +10,7 @@ import { BackupReminder } from './pages/Settings';
 import { HomeToday, HomeGoals } from './pages/Home';
 import { HomeBucket } from './pages/Bucket';
 import { DumpAll, Bookshelf } from './pages/Dump';
+import { Feed } from './pages/Feed';
 import { MoneyOverview, MoneyBudget, MoneyGoals, TripPlanner } from './pages/Money';
 import { HealthClasses, HealthRoutines } from './pages/Health';
 import { HealthWorkouts } from './pages/Workouts';
@@ -27,6 +28,7 @@ const PAGES: Record<string, (p: { param?: string }) => ReactNode> = {
   'home/goals': () => <HomeGoals />,
   'home/bucket': ({ param }) => <HomeBucket focus={param} />,
   'dump/all': ({ param }) => <DumpAll focus={param} />,
+  'dump/feed': ({ param }) => <Feed focus={param} />,
   'dump/books': ({ param }) => <Bookshelf focus={param} />,
   'money/overview': () => <MoneyOverview />,
   'money/budget': () => <MoneyBudget />,
