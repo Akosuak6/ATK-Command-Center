@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
-import { db, useTable } from '../lib/db';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db, useMeta, useTable } from '../lib/db';
+import { feedDb } from '../lib/feed';
 import { hrefFor } from '../lib/router';
 import { DUMP_TAG, DUMP_LABEL } from '../pages/Dump';
 
@@ -13,6 +15,9 @@ export function SearchResults({ query, onDone }: { query: string; onDone: () => 
   const trips = useTable(db.trips, 'date');
   const contacts = useTable(db.contacts);
   const bucket = useTable(db.bucket);
+  const feedPulled = useLiveQuery(() => feedDb.items.orderBy('date').reverse().toArray(), []);
+  const feedPosts = useTable(db.feedPosts, 'date', true);
+  const feedHidden = useMeta<string[]>('feedHidden', []);
   const q = query.trim().toLowerCase();
   const has = (...parts: (string | undefined)[]) => parts.join(' ').toLowerCase().includes(q);
 
@@ -40,6 +45,13 @@ export function SearchResults({ query, onDone }: { query: string; onDone: () => 
   trips.forEach((t) => {
     if (has(t.name, t.status)) results.push({ kind: 'Trip', title: t.name, where: 'Trip planner', tag: 'tag t-money', href: hrefFor('money', 'trips', t.id) });
   });
+
+  // Feed stories come last and only the latest few, so they never crowd out your own things.
+  const hiddenFeed = new Set(feedHidden);
+  [...feedPosts, ...(feedPulled ?? [])]
+    .filter((f) => !hiddenFeed.has(f.id) && has(f.title, f.summary, f.source, f.author))
+    .slice(0, 8)
+    .forEach((f) => results.push({ kind: f.kind === 'linkedin' ? 'LinkedIn' : 'Story', title: f.title, where: 'Feed', tag: 'tag t-plain', href: hrefFor('dump', 'feed', f.id) }));
 
   return (
     <section className="card" aria-labelledby="results-title">

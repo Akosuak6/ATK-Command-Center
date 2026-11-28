@@ -1,0 +1,11 @@
+{
+  "_help": "Copy this file to config.json (same folder) and edit it. config.json stays on your machine and is never committed.",
+  "keywords": ["quiet luxury", "menopause", "virtual try-on", "Medicaid work requirements"],
+  "keywordsOnly": false,
+  "skip": [],
+  "feeds": [],
+  "searches": [],
+  "_feeds_example": [{ "name": "A newsletter", "url": "https://example.substack.com/feed", "covers": "health", "keep": "all" }],
+  "_covers": "health, fashion or both",
+  "_keep": "all keeps every story; match keeps only stories on your topics or keywords"
+}

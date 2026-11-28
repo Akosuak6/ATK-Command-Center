@@ -50,6 +50,24 @@ Settings, Calendars links Google calendars by their secret iCal address (Google 
 - `calendar` rows: `time` is `HH:MM` or `All day`, `end` is the last day of an event that spans days, `repeats` marks an occurrence of a recurring series.
 - To test locally, serve an `.ics` file from this computer (http and local addresses are allowed only by `npm run dev`; a deploy accepts https public addresses only).
 
+## Feed
+
+Dump, Feed collects this week's stories on your own keywords, healthcare (digital health, femtech, women's health, mental health, Medicaid, Medicare, health services, healthcare with AI and with consumers) and fashion (trend forecasting, fashion with technology, AI and consumers).
+
+- The scraper is its own program in `scraper/` (see `scraper/README.md`), with no dependencies and no AI in it, so sites that block AI crawlers still answer. `/api/feed` (`src/server/handlers/feed.js`, behind the sign in) runs it on Vercel when a device refreshes, and it runs on the laptop too: `npm run feed`.
+- It reads about 40 public RSS feeds and Google News searches (WGSN, The Business of Fashion and Vogue Business come in through Google News), tags each story with topics and your keywords, drops repeats, shopping lists and horoscopes, and ranks the rest.
+- Your keywords: the box at the top of the feed. Each one is matched against every story and gets its own news search.
+- LinkedIn has no feeds and its terms forbid scraping, so it is never logged in to. Paste posts into the feed; two Google News searches find public LinkedIn articles.
+- Sources and topics mutes topics, turns sources off, shows which answered, and adds your own feeds or searches.
+- Storage: pulled stories stay on each device (their own IndexedDB database, `akosua-command-center-feed`), since they can be fetched again and syncing hundreds of rows per refresh would be wasteful. Your choices sync through Neon: keywords, sources and topics (meta `feedSettings`), hidden stories (meta `feedHidden`), pasted posts (the `feedPosts` store) and saved stories (the Dump).
+
+```bash
+npm run feed -- --keywords "quiet luxury, Oura"   # print the top stories
+npm run feed -- --html feed.html --every 60       # a page for any browser, refreshed hourly
+npm run feed -- --check                           # which sources answered
+npm test                                          # scraper tests
+```
+
 ## Your real data
 
 The repo is public, so real data never goes in `src/data/seed.json` (it only has placeholders). Your real tables are in `private/seed-overlay.json` (gitignored). `npm run make-import` merges the two into `private/import-backup.json` to import once, as above. After that, Neon holds everything.
@@ -64,5 +82,6 @@ The repo is public, so real data never goes in `src/data/seed.json` (it only has
 - `src/server/handlers/*` link previews, image and logo copies, book lookup, TikTok book lists, Hevy; run through `src/server/adapter.ts`
 - `src/server/ics.ts` reads one calendar file into events; `src/server/calendars.ts` linked calendars and their sync; `src/lib/calendars.ts` the device side
 - `src/lib/router.ts` sections, subpages and hash routes (`#/money/trips/ethiopia-2027`), so moving around needs no server
+- `scraper/` the feed scraper, a standalone program; `src/lib/feed.ts` and `src/pages/Feed.tsx` the feed on the device
 - `src/pages/*` one file per section (plain components; the empty root `pages/` folder keeps Next.js from treating them as routes)
 - `scripts/make-icons.mjs` renders the home screen icons and iPhone splash screens; `scripts/make-import.mjs` builds the import file

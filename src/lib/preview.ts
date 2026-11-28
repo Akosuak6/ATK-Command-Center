@@ -4,7 +4,7 @@ import { linkKind, youtubeThumbs } from './links';
 
 // Link previews come from two small serverless functions in api/ (preview and image).
 // When they are not deployed, or fail, callers fall back to a title made from the URL and no cover.
-export interface Preview { title?: string; siteName?: string; image?: string }
+export interface Preview { title?: string; siteName?: string; image?: string; description?: string }
 
 async function get(path: string, timeoutMs: number) {
   const ctrl = new AbortController();

@@ -1,0 +1,12 @@
+{
+  "name": "command-center-feed-scraper",
+  "private": true,
+  "type": "module",
+  "description": "Reads public RSS feeds and Google News searches for healthcare and fashion stories. No dependencies.",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "feed": "node feed.mjs",
+    "check": "node feed.mjs --check",
+    "test": "node --test feed.test.mjs"
+  }
+}

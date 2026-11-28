@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import type {
   Account, Bill, Book, Studio, Transaction, BudgetCategory, CalendarEvent, DumpItem, FitnessClass, Goal, Habit, HealthDay,
   Meta, Person, Pin, Priority, Restaurant, RoadmapItem, SavingsGoal, ShowEvent, SkincareStep, Supplement,
-  Trim, Trip, WishItem, DaySnapshot, PeriodGoal, BucketItem, Contact, CareItem
+  Trim, Trip, WishItem, DaySnapshot, PeriodGoal, BucketItem, Contact, CareItem, FeedItem
 } from './types';
 
 export class CommandCenterDB extends Dexie {
@@ -37,6 +37,7 @@ export class CommandCenterDB extends Dexie {
   bucket!: Table<BucketItem, string>;
   contacts!: Table<Contact, string>;
   care!: Table<CareItem, string>;
+  feedPosts!: Table<FeedItem, string>;
 
   constructor() {
     super('akosua-command-center');
@@ -75,6 +76,9 @@ export class CommandCenterDB extends Dexie {
       contacts: 'id, lastContact',
       care: 'id, order'
     });
+    // Version 2: LinkedIn posts and articles you paste into the feed. Stories the feed pulls in stay on
+    // each device (src/lib/feed.ts), so a refresh never sends hundreds of rows to Neon.
+    this.version(2).stores({ feedPosts: 'id, date' });
   }
 }
 
